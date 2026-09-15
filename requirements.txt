@@ -1,0 +1,18 @@
+fastapi>=0.110
+uvicorn>=0.29
+requests>=2.31
+# Naukri is read through Microsoft Edge (already on Windows), so no browser download is needed.
+playwright>=1.45
+# Reads Excel (.xlsx) company lists on the Companies tab.
+openpyxl>=3.1
+# openpyxl uses this automatically to refuse malicious XML inside Excel files ("billion laughs" and similar).
+defusedxml>=0.7
+# JobSpy's own dependencies, listed here because python-jobspy 1.1.82 pins numpy 1.26.3,
+# which cannot install on Python 3.13+. run.bat installs python-jobspy with --no-deps.
+pandas>=2.1
+numpy>=1.26
+pydantic>=2.3
+tls-client>=1.0.1
+markdownify>=1.1
+beautifulsoup4>=4.12
+regex>=2024.4.28

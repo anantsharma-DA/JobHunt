@@ -1,0 +1,368 @@
+{
+  "updated": "2026-09-13",
+  "categories": [
+    {
+      "name": "Data & Analytics",
+      "titles": [
+        {"title": "Data Analyst", "skills": ["SQL", "Excel", "Power BI", "Tableau", "Python", "Pandas", "Statistics", "Data Visualization", "Data Cleaning", "Dashboards", "Reporting"]},
+        {"title": "Junior Data Analyst", "skills": ["SQL", "Excel", "Power BI", "Python", "Data Cleaning", "Pivot Tables", "Data Visualization", "Reporting"]},
+        {"title": "Senior Data Analyst", "skills": ["SQL", "Python", "Power BI", "Tableau", "Statistics", "Data Modeling", "Stakeholder Management", "A/B Testing", "ETL", "Dashboards"]},
+        {"title": "Business Analyst", "skills": ["Requirement Gathering", "BRD", "FRD", "User Stories", "SQL", "Excel", "Power BI", "Process Mapping", "Stakeholder Management", "JIRA", "Agile", "UAT"]},
+        {"title": "Business Data Analyst", "skills": ["SQL", "Excel", "Power BI", "Requirement Gathering", "Data Visualization", "Stakeholder Management", "KPI Reporting", "Python"]},
+        {"title": "MIS Analyst", "skills": ["Advanced Excel", "VBA", "Macros", "SQL", "MIS Reporting", "Pivot Tables", "VLOOKUP", "Power BI", "Dashboards", "Data Validation"]},
+        {"title": "MIS Executive", "skills": ["Advanced Excel", "MIS Reporting", "VLOOKUP", "Pivot Tables", "Macros", "Google Sheets", "Data Entry", "Reporting", "Dashboards"]},
+        {"title": "Reporting Analyst", "skills": ["SQL", "Excel", "Power BI", "Tableau", "Report Automation", "KPI Reporting", "Dashboards", "Data Validation", "VBA"]},
+        {"title": "Operations Analyst", "skills": ["Excel", "SQL", "Power BI", "Process Improvement", "KPI Reporting", "Root Cause Analysis", "Data Analysis", "Dashboards"]},
+        {"title": "Product Analyst", "skills": ["SQL", "Python", "A/B Testing", "Product Analytics", "Google Analytics", "Mixpanel", "Amplitude", "Statistics", "Tableau", "Funnel Analysis"]},
+        {"title": "Marketing Analyst", "skills": ["SQL", "Excel", "Google Analytics", "Power BI", "Tableau", "Campaign Analysis", "Marketing Analytics", "Python", "A/B Testing"]},
+        {"title": "Financial Analyst", "skills": ["Financial Modeling", "Excel", "Financial Analysis", "Budgeting", "Forecasting", "Variance Analysis", "Power BI", "SAP", "Valuation"]},
+        {"title": "Risk Analyst", "skills": ["SQL", "Python", "SAS", "Excel", "Risk Management", "Credit Risk", "Statistics", "Regulatory Reporting", "Power BI"]},
+        {"title": "Fraud Analyst", "skills": ["SQL", "Excel", "Fraud Detection", "Transaction Monitoring", "Risk Management", "Python", "Data Analysis", "AML"]},
+        {"title": "Credit Analyst", "skills": ["Credit Risk", "Financial Analysis", "Excel", "Credit Appraisal", "Financial Statements", "Risk Management", "SAS"]},
+        {"title": "Pricing Analyst", "skills": ["Excel", "SQL", "Pricing Strategy", "Python", "Power BI", "Forecasting", "Statistics", "Market Research"]},
+        {"title": "Supply Chain Analyst", "skills": ["Excel", "SQL", "Power BI", "Demand Planning", "Inventory Management", "SAP", "Forecasting", "Supply Chain", "Python"]},
+        {"title": "HR Analyst", "skills": ["Excel", "HR Analytics", "Power BI", "HRMS", "SQL", "Workforce Planning", "Reporting", "Dashboards"]},
+        {"title": "Sales Analyst", "skills": ["Excel", "SQL", "Power BI", "Salesforce", "Sales Forecasting", "Tableau", "KPI Reporting", "CRM"]},
+        {"title": "Research Analyst", "skills": ["Market Research", "Excel", "Secondary Research", "Report Writing", "Data Analysis", "Primary Research", "PowerPoint", "Python"]},
+        {"title": "Quantitative Analyst", "skills": ["Python", "R", "Statistics", "Financial Modeling", "SQL", "Machine Learning", "Time Series", "C++", "Derivatives"]},
+        {"title": "Web Analyst", "skills": ["Google Analytics", "Google Tag Manager", "Adobe Analytics", "SQL", "Excel", "A/B Testing", "Looker Studio"]},
+        {"title": "Customer Insights Analyst", "skills": ["SQL", "Python", "Customer Segmentation", "Excel", "Tableau", "Statistics", "Survey Analysis", "Power BI"]},
+        {"title": "Analytics Manager", "skills": ["SQL", "Python", "Power BI", "Tableau", "Team Management", "Stakeholder Management", "Statistics", "Data Strategy", "A/B Testing"]},
+        {"title": "Data Analytics Consultant", "skills": ["SQL", "Power BI", "Tableau", "Python", "Stakeholder Management", "Requirement Gathering", "Data Modeling", "Presentation Skills"]},
+        {"title": "Data Quality Analyst", "skills": ["SQL", "Data Quality", "Data Validation", "Data Profiling", "Excel", "Python", "Data Governance", "ETL"]},
+        {"title": "Data Governance Analyst", "skills": ["Data Governance", "Data Quality", "Metadata Management", "Collibra", "SQL", "Data Lineage", "Data Privacy"]}
+      ]
+    },
+    {
+      "name": "Business Intelligence & Reporting",
+      "titles": [
+        {"title": "Business Intelligence Analyst", "skills": ["SQL", "Power BI", "Tableau", "Data Modeling", "DAX", "ETL", "Data Warehousing", "Dashboards", "Excel"]},
+        {"title": "BI Developer", "skills": ["SQL", "Power BI", "DAX", "SSIS", "SSRS", "Data Modeling", "ETL", "Data Warehousing", "Tableau", "Azure Data Factory"]},
+        {"title": "Power BI Developer", "skills": ["Power BI", "DAX", "Power Query", "SQL", "Data Modeling", "Power BI Service", "Excel", "Azure", "Row-Level Security"]},
+        {"title": "Tableau Developer", "skills": ["Tableau", "SQL", "Data Visualization", "Tableau Prep", "Data Modeling", "Dashboards", "ETL", "Python"]},
+        {"title": "Qlik Developer", "skills": ["Qlik Sense", "QlikView", "SQL", "Data Modeling", "ETL", "Dashboards", "Set Analysis"]},
+        {"title": "Looker Developer", "skills": ["Looker", "LookML", "SQL", "BigQuery", "Data Modeling", "Dashboards", "Looker Studio"]},
+        {"title": "Reporting Specialist", "skills": ["Excel", "SQL", "SSRS", "Power BI", "Report Automation", "Crystal Reports", "Data Validation", "MIS Reporting"]},
+        {"title": "Dashboard Developer", "skills": ["Power BI", "Tableau", "SQL", "Data Visualization", "JavaScript", "DAX", "Excel", "UI Design"]},
+        {"title": "Report Automation Developer", "skills": ["VBA", "Python", "Google Apps Script", "SQL", "Excel", "Power Automate", "REST API", "Report Automation"]},
+        {"title": "MIS Manager", "skills": ["MIS Reporting", "Advanced Excel", "SQL", "Power BI", "Team Management", "Report Automation", "Stakeholder Management", "KPI Reporting"]},
+        {"title": "BI Manager", "skills": ["Power BI", "Tableau", "SQL", "Data Warehousing", "Team Management", "Stakeholder Management", "Data Strategy", "Data Modeling"]},
+        {"title": "Excel VBA Developer", "skills": ["VBA", "Macros", "Advanced Excel", "SQL", "MS Access", "Power Query", "Report Automation"]}
+      ]
+    },
+    {
+      "name": "Data Engineering & Databases",
+      "titles": [
+        {"title": "Data Engineer", "skills": ["Python", "SQL", "Apache Spark", "PySpark", "Airflow", "ETL", "AWS", "Azure", "Databricks", "Kafka", "Data Warehousing"]},
+        {"title": "Big Data Engineer", "skills": ["Apache Spark", "Hadoop", "Hive", "Scala", "Kafka", "PySpark", "HDFS", "SQL", "AWS"]},
+        {"title": "ETL Developer", "skills": ["ETL", "SQL", "Informatica", "SSIS", "Talend", "Data Warehousing", "Shell Scripting", "Oracle"]},
+        {"title": "Azure Data Engineer", "skills": ["Azure Data Factory", "Azure Databricks", "Azure Synapse", "PySpark", "SQL", "ADLS", "Python", "Delta Lake"]},
+        {"title": "AWS Data Engineer", "skills": ["AWS Glue", "Amazon Redshift", "S3", "PySpark", "SQL", "Python", "Athena", "Lambda", "Airflow"]},
+        {"title": "GCP Data Engineer", "skills": ["BigQuery", "Dataflow", "Cloud Composer", "PySpark", "SQL", "Python", "Pub/Sub", "GCP"]},
+        {"title": "Databricks Engineer", "skills": ["Databricks", "PySpark", "Delta Lake", "SQL", "Python", "Unity Catalog", "Apache Spark", "Azure"]},
+        {"title": "Snowflake Developer", "skills": ["Snowflake", "SQL", "dbt", "ETL", "Data Modeling", "Python", "Snowpipe", "Data Warehousing"]},
+        {"title": "Analytics Engineer", "skills": ["SQL", "dbt", "Data Modeling", "Snowflake", "BigQuery", "Python", "Looker", "Git"]},
+        {"title": "Data Architect", "skills": ["Data Modeling", "Data Warehousing", "Cloud Architecture", "SQL", "Data Governance", "Snowflake", "Azure", "AWS", "Data Lakehouse"]},
+        {"title": "Database Administrator", "skills": ["SQL Server", "Oracle", "MySQL", "PostgreSQL", "Backup and Recovery", "Performance Tuning", "High Availability", "Linux"]},
+        {"title": "SQL Developer", "skills": ["SQL", "T-SQL", "PL/SQL", "Stored Procedures", "Query Optimization", "SQL Server", "Oracle", "SSIS"]},
+        {"title": "Oracle PL/SQL Developer", "skills": ["PL/SQL", "Oracle", "SQL", "Stored Procedures", "Performance Tuning", "Unix", "Oracle Forms"]},
+        {"title": "Data Warehouse Developer", "skills": ["Data Warehousing", "ETL", "SQL", "Dimensional Modeling", "Informatica", "Snowflake", "Teradata"]},
+        {"title": "Data Migration Specialist", "skills": ["Data Migration", "ETL", "SQL", "Data Mapping", "Data Validation", "SAP", "Python"]}
+      ]
+    },
+    {
+      "name": "Data Science, AI & ML",
+      "titles": [
+        {"title": "Data Scientist", "skills": ["Python", "Machine Learning", "SQL", "Statistics", "Pandas", "Scikit-learn", "Deep Learning", "NLP", "TensorFlow", "A/B Testing"]},
+        {"title": "Senior Data Scientist", "skills": ["Python", "Machine Learning", "Deep Learning", "Statistics", "SQL", "MLOps", "NLP", "Stakeholder Management", "PyTorch"]},
+        {"title": "Machine Learning Engineer", "skills": ["Python", "Machine Learning", "TensorFlow", "PyTorch", "MLOps", "Docker", "Kubernetes", "AWS", "Scikit-learn", "Model Deployment"]},
+        {"title": "AI Engineer", "skills": ["Python", "LLM", "Generative AI", "LangChain", "RAG", "Vector Databases", "Prompt Engineering", "OpenAI API", "FastAPI", "Azure OpenAI"]},
+        {"title": "Generative AI Engineer", "skills": ["Generative AI", "LLM", "RAG", "LangChain", "Prompt Engineering", "Python", "Vector Databases", "Fine-tuning", "Hugging Face"]},
+        {"title": "NLP Engineer", "skills": ["NLP", "Python", "Transformers", "Hugging Face", "spaCy", "PyTorch", "LLM", "Text Classification"]},
+        {"title": "Computer Vision Engineer", "skills": ["Computer Vision", "OpenCV", "Python", "PyTorch", "TensorFlow", "Deep Learning", "CNN", "YOLO"]},
+        {"title": "Deep Learning Engineer", "skills": ["Deep Learning", "PyTorch", "TensorFlow", "Python", "CNN", "Transformers", "CUDA", "Model Optimization"]},
+        {"title": "MLOps Engineer", "skills": ["MLOps", "MLflow", "Kubeflow", "Docker", "Kubernetes", "CI/CD", "Python", "AWS SageMaker", "Model Monitoring"]},
+        {"title": "AI Research Scientist", "skills": ["Deep Learning", "PyTorch", "Machine Learning", "Python", "Research Publications", "Mathematics", "LLM", "Reinforcement Learning"]},
+        {"title": "Prompt Engineer", "skills": ["Prompt Engineering", "LLM", "Generative AI", "Python", "ChatGPT", "RAG", "LLM Evaluation"]},
+        {"title": "Decision Scientist", "skills": ["Statistics", "Python", "SQL", "A/B Testing", "Machine Learning", "Causal Inference", "Tableau", "Business Acumen"]},
+        {"title": "Statistician", "skills": ["Statistics", "R", "SAS", "Python", "Hypothesis Testing", "Regression Analysis", "SPSS", "Experimental Design"]},
+        {"title": "AI ML Consultant", "skills": ["Machine Learning", "Generative AI", "Python", "Stakeholder Management", "Solution Design", "Cloud Platforms", "Presentation Skills"]},
+        {"title": "Data Annotation Specialist", "skills": ["Data Annotation", "Data Labeling", "Attention to Detail", "Excel", "Quality Control", "Computer Vision"]}
+      ]
+    },
+    {
+      "name": "Software Development",
+      "titles": [
+        {"title": "Software Engineer", "skills": ["Data Structures", "Algorithms", "Java", "Python", "SQL", "Git", "REST API", "System Design", "OOP"]},
+        {"title": "Software Developer", "skills": ["Java", "Python", "JavaScript", "SQL", "Git", "REST API", "OOP", "Agile"]},
+        {"title": "Full Stack Developer", "skills": ["JavaScript", "React", "Node.js", "SQL", "MongoDB", "REST API", "HTML", "CSS", "Git", "TypeScript"]},
+        {"title": "Frontend Developer", "skills": ["JavaScript", "React", "HTML", "CSS", "TypeScript", "Redux", "Next.js", "Tailwind CSS", "Responsive Design"]},
+        {"title": "Backend Developer", "skills": ["Node.js", "Java", "Python", "REST API", "SQL", "MongoDB", "Microservices", "Docker", "Redis"]},
+        {"title": "Java Developer", "skills": ["Java", "Spring Boot", "Microservices", "Hibernate", "REST API", "SQL", "Kafka", "JUnit", "Maven"]},
+        {"title": "Python Developer", "skills": ["Python", "Django", "Flask", "FastAPI", "REST API", "SQL", "PostgreSQL", "Docker", "Git"]},
+        {"title": ".NET Developer", "skills": ["C#", ".NET Core", "ASP.NET", "SQL Server", "Entity Framework", "Web API", "Azure", "LINQ"]},
+        {"title": "JavaScript Developer", "skills": ["JavaScript", "TypeScript", "React", "Node.js", "HTML", "CSS", "REST API", "Git"]},
+        {"title": "React Developer", "skills": ["React", "JavaScript", "TypeScript", "Redux", "HTML", "CSS", "Next.js", "REST API", "Jest"]},
+        {"title": "Angular Developer", "skills": ["Angular", "TypeScript", "RxJS", "JavaScript", "HTML", "CSS", "REST API", "NgRx"]},
+        {"title": "Node.js Developer", "skills": ["Node.js", "Express.js", "JavaScript", "TypeScript", "MongoDB", "REST API", "Microservices", "SQL"]},
+        {"title": "PHP Developer", "skills": ["PHP", "Laravel", "MySQL", "JavaScript", "WordPress", "REST API", "CodeIgniter", "HTML"]},
+        {"title": "Golang Developer", "skills": ["Go", "Microservices", "REST API", "gRPC", "Docker", "Kubernetes", "PostgreSQL", "Redis"]},
+        {"title": "Android Developer", "skills": ["Kotlin", "Java", "Android SDK", "Jetpack Compose", "MVVM", "REST API", "Firebase", "Git"]},
+        {"title": "iOS Developer", "skills": ["Swift", "SwiftUI", "iOS SDK", "Xcode", "Objective-C", "REST API", "Core Data"]},
+        {"title": "Mobile App Developer", "skills": ["Flutter", "React Native", "Dart", "Kotlin", "Swift", "REST API", "Firebase"]},
+        {"title": "Flutter Developer", "skills": ["Flutter", "Dart", "Firebase", "REST API", "State Management", "Android", "iOS"]},
+        {"title": "Web Developer", "skills": ["HTML", "CSS", "JavaScript", "PHP", "WordPress", "React", "Responsive Design", "SEO"]},
+        {"title": "WordPress Developer", "skills": ["WordPress", "PHP", "HTML", "CSS", "JavaScript", "WooCommerce", "MySQL", "Elementor"]},
+        {"title": "Google Apps Script Developer", "skills": ["Google Apps Script", "JavaScript", "Google Sheets", "Google Workspace", "REST API", "HTML", "Automation"]},
+        {"title": "Automation Developer", "skills": ["Python", "VBA", "Power Automate", "Google Apps Script", "Selenium", "REST API", "Process Automation"]},
+        {"title": "RPA Developer", "skills": ["UiPath", "Automation Anywhere", "Blue Prism", "Power Automate", "RPA", "VBA", "Python", "Process Automation"]},
+        {"title": "Embedded Software Engineer", "skills": ["C", "C++", "Embedded C", "RTOS", "Microcontrollers", "Linux", "Debugging", "Communication Protocols"]},
+        {"title": "Game Developer", "skills": ["Unity", "C#", "Unreal Engine", "C++", "Game Design", "3D Math"]},
+        {"title": "Blockchain Developer", "skills": ["Solidity", "Ethereum", "Smart Contracts", "Web3.js", "Blockchain", "JavaScript", "Rust"]},
+        {"title": "Salesforce Developer", "skills": ["Apex", "Visualforce", "Lightning Web Components", "SOQL", "Salesforce", "Salesforce Integration", "JavaScript"]},
+        {"title": "API Developer", "skills": ["REST API", "GraphQL", "Node.js", "Java", "API Gateway", "Swagger", "Postman", "Microservices"]},
+        {"title": "Technical Lead", "skills": ["System Design", "Java", "Microservices", "Team Leadership", "Code Review", "Cloud Platforms", "Agile", "Software Architecture"]},
+        {"title": "Solution Architect", "skills": ["Solution Architecture", "Cloud Architecture", "AWS", "Azure", "Microservices", "System Design", "System Integration", "Stakeholder Management"]},
+        {"title": "Software Engineering Manager", "skills": ["Team Management", "System Design", "Agile", "Stakeholder Management", "Hiring", "Delivery Management", "Software Architecture"]}
+      ]
+    },
+    {
+      "name": "QA & Testing",
+      "titles": [
+        {"title": "QA Engineer", "skills": ["Manual Testing", "Test Cases", "Selenium", "JIRA", "SQL", "API Testing", "Agile", "Regression Testing"]},
+        {"title": "Software Tester", "skills": ["Manual Testing", "Test Cases", "Bug Reporting", "JIRA", "SDLC", "STLC", "Regression Testing", "SQL"]},
+        {"title": "Manual Tester", "skills": ["Manual Testing", "Test Cases", "Test Plans", "JIRA", "Functional Testing", "Regression Testing", "UAT"]},
+        {"title": "Automation Test Engineer", "skills": ["Selenium", "Java", "TestNG", "Cucumber", "API Testing", "Rest Assured", "CI/CD", "Python"]},
+        {"title": "SDET", "skills": ["Java", "Selenium", "API Testing", "Rest Assured", "CI/CD", "Data Structures", "Playwright", "Test Automation Frameworks"]},
+        {"title": "Performance Test Engineer", "skills": ["JMeter", "LoadRunner", "Performance Testing", "Gatling", "APM Tools", "Load Testing"]},
+        {"title": "API Test Engineer", "skills": ["API Testing", "Postman", "Rest Assured", "SoapUI", "JSON", "SQL", "Test Automation Frameworks"]},
+        {"title": "Mobile Test Engineer", "skills": ["Appium", "Mobile Testing", "Android", "iOS", "Selenium", "Java", "Manual Testing"]},
+        {"title": "ETL Tester", "skills": ["ETL Testing", "SQL", "Data Warehousing", "Informatica", "Data Validation", "Test Cases"]},
+        {"title": "QA Lead", "skills": ["Test Strategy", "Test Plans", "Selenium", "Team Management", "JIRA", "Agile", "Defect Management"]},
+        {"title": "Playwright Automation Engineer", "skills": ["Playwright", "TypeScript", "JavaScript", "API Testing", "CI/CD", "Test Automation Frameworks"]},
+        {"title": "UAT Analyst", "skills": ["UAT", "Test Cases", "Business Analysis", "Requirement Gathering", "JIRA", "Defect Management"]}
+      ]
+    },
+    {
+      "name": "Cloud, DevOps & Infrastructure",
+      "titles": [
+        {"title": "DevOps Engineer", "skills": ["CI/CD", "Jenkins", "Docker", "Kubernetes", "AWS", "Terraform", "Linux", "Git", "Ansible", "Shell Scripting"]},
+        {"title": "Cloud Engineer", "skills": ["AWS", "Azure", "GCP", "Terraform", "Linux", "Networking", "Docker", "Cloud Security", "IAM"]},
+        {"title": "AWS Cloud Engineer", "skills": ["AWS", "EC2", "S3", "IAM", "VPC", "Lambda", "CloudFormation", "Terraform", "CloudWatch"]},
+        {"title": "Azure Cloud Engineer", "skills": ["Azure", "Azure DevOps", "ARM Templates", "Terraform", "Azure AD", "Networking", "PowerShell", "AKS"]},
+        {"title": "GCP Cloud Engineer", "skills": ["GCP", "Compute Engine", "GKE", "BigQuery", "Terraform", "IAM", "Networking"]},
+        {"title": "Site Reliability Engineer", "skills": ["SRE", "Kubernetes", "Prometheus", "Grafana", "Linux", "Python", "Incident Management", "Terraform", "Monitoring"]},
+        {"title": "Platform Engineer", "skills": ["Kubernetes", "Terraform", "CI/CD", "Docker", "AWS", "Go", "Helm", "Infrastructure as Code"]},
+        {"title": "Kubernetes Engineer", "skills": ["Kubernetes", "Docker", "Helm", "EKS", "AKS", "Linux", "CI/CD", "Istio"]},
+        {"title": "Cloud Architect", "skills": ["Cloud Architecture", "AWS", "Azure", "GCP", "Terraform", "Networking", "Cloud Security", "Cost Optimization"]},
+        {"title": "Linux Administrator", "skills": ["Linux", "Red Hat", "Shell Scripting", "Networking", "Apache", "Ansible", "Troubleshooting", "Virtualization"]},
+        {"title": "System Administrator", "skills": ["Windows Server", "Linux", "Active Directory", "VMware", "Networking", "Backup and Recovery", "Troubleshooting", "PowerShell"]},
+        {"title": "Build and Release Engineer", "skills": ["Jenkins", "Git", "Maven", "CI/CD", "Azure DevOps", "Shell Scripting", "Artifactory"]},
+        {"title": "Infrastructure Engineer", "skills": ["Networking", "Linux", "Windows Server", "VMware", "Cloud Platforms", "Storage", "Monitoring", "Terraform"]},
+        {"title": "Middleware Administrator", "skills": ["WebLogic", "WebSphere", "JBoss", "Tomcat", "Linux", "Shell Scripting", "Middleware"]}
+      ]
+    },
+    {
+      "name": "Cybersecurity",
+      "titles": [
+        {"title": "Cyber Security Analyst", "skills": ["SIEM", "Splunk", "Incident Response", "Threat Analysis", "Vulnerability Assessment", "Firewalls", "SOC", "Networking"]},
+        {"title": "SOC Analyst", "skills": ["SOC", "SIEM", "Splunk", "QRadar", "Incident Response", "Threat Hunting", "Log Analysis", "EDR"]},
+        {"title": "Information Security Analyst", "skills": ["Information Security", "ISO 27001", "Risk Assessment", "Vulnerability Management", "Compliance", "Firewalls", "IAM"]},
+        {"title": "Penetration Tester", "skills": ["Penetration Testing", "VAPT", "Burp Suite", "Kali Linux", "OWASP", "Metasploit", "Ethical Hacking", "Nmap"]},
+        {"title": "Cloud Security Engineer", "skills": ["Cloud Security", "AWS", "Azure", "IAM", "CSPM", "Kubernetes Security", "Zero Trust", "DevSecOps"]},
+        {"title": "Network Security Engineer", "skills": ["Firewalls", "Palo Alto", "Fortinet", "VPN", "IDS/IPS", "Networking", "Cisco", "Network Security"]},
+        {"title": "IAM Engineer", "skills": ["IAM", "Okta", "SailPoint", "Active Directory", "SSO", "CyberArk", "Azure AD", "PAM"]},
+        {"title": "GRC Analyst", "skills": ["GRC", "ISO 27001", "Risk Assessment", "Compliance", "Audit", "SOC 2", "Policy Management", "GDPR"]},
+        {"title": "Security Engineer", "skills": ["Application Security", "DevSecOps", "SAST", "DAST", "Threat Modeling", "Cloud Security", "Python", "OWASP"]},
+        {"title": "Cyber Security Manager", "skills": ["Security Strategy", "Risk Management", "ISO 27001", "Incident Response", "Team Management", "Compliance", "NIST"]}
+      ]
+    },
+    {
+      "name": "IT Support & Networking",
+      "titles": [
+        {"title": "IT Support Engineer", "skills": ["Troubleshooting", "Windows", "Active Directory", "Office 365", "Networking", "Ticketing Tools", "Hardware Support", "ITIL"]},
+        {"title": "Desktop Support Engineer", "skills": ["Desktop Support", "Windows", "Troubleshooting", "Hardware Support", "Outlook", "Printers", "Active Directory", "LAN"]},
+        {"title": "Help Desk Analyst", "skills": ["Help Desk", "Ticketing Tools", "ServiceNow", "Troubleshooting", "Customer Service", "Windows", "Office 365", "ITIL"]},
+        {"title": "Technical Support Engineer", "skills": ["Technical Support", "Troubleshooting", "Customer Service", "SQL", "Linux", "Networking", "Ticketing Tools", "Communication Skills"]},
+        {"title": "Network Engineer", "skills": ["Routing and Switching", "CCNA", "Cisco", "Firewalls", "LAN/WAN", "TCP/IP", "BGP", "OSPF", "Troubleshooting"]},
+        {"title": "Network Administrator", "skills": ["Networking", "CCNA", "Firewalls", "LAN/WAN", "VPN", "DHCP", "DNS", "Troubleshooting"]},
+        {"title": "Application Support Engineer", "skills": ["Application Support", "SQL", "Linux", "ITIL", "Incident Management", "ServiceNow", "Troubleshooting", "Shell Scripting"]},
+        {"title": "Production Support Engineer", "skills": ["Production Support", "SQL", "Unix", "Incident Management", "ITIL", "Monitoring", "Shell Scripting", "Root Cause Analysis"]},
+        {"title": "ServiceNow Developer", "skills": ["ServiceNow", "JavaScript", "ITSM", "Glide API", "Service Portal", "ITIL", "REST API"]},
+        {"title": "IT Manager", "skills": ["IT Infrastructure", "Team Management", "Vendor Management", "ITIL", "Budgeting", "Networking", "Information Security"]},
+        {"title": "IT Asset Management Executive", "skills": ["IT Asset Management", "Excel", "ServiceNow", "Inventory Management", "Software Licensing", "Hardware Support"]}
+      ]
+    },
+    {
+      "name": "ERP, CRM & Enterprise Apps",
+      "titles": [
+        {"title": "SAP MM Consultant", "skills": ["SAP MM", "Procurement", "Inventory Management", "SAP S/4HANA", "Purchasing", "Vendor Management", "Material Master"]},
+        {"title": "SAP SD Consultant", "skills": ["SAP SD", "Order to Cash", "Pricing", "Billing", "SAP S/4HANA", "Shipping", "Credit Management"]},
+        {"title": "SAP FICO Consultant", "skills": ["SAP FICO", "General Ledger", "Accounts Payable", "Accounts Receivable", "Asset Accounting", "Controlling", "SAP S/4HANA"]},
+        {"title": "SAP ABAP Developer", "skills": ["SAP ABAP", "BAPI", "BADI", "ALV Reports", "OData", "SAP Fiori", "SAP S/4HANA", "RICEFW"]},
+        {"title": "SAP EWM Consultant", "skills": ["SAP EWM", "Warehouse Management", "SAP S/4HANA", "RF Framework", "Inventory Management", "Logistics"]},
+        {"title": "SAP Basis Consultant", "skills": ["SAP Basis", "SAP HANA", "System Administration", "Transport Management", "SAP S/4HANA", "Linux"]},
+        {"title": "Oracle Functional Consultant", "skills": ["Oracle EBS", "Oracle Fusion", "Oracle Financials", "Oracle SCM", "Requirement Gathering", "SQL", "Implementation"]},
+        {"title": "Microsoft Dynamics 365 Consultant", "skills": ["Dynamics 365", "Dynamics CRM", "Power Platform", "Business Central", "Requirement Gathering", "Implementation"]},
+        {"title": "Salesforce Administrator", "skills": ["Salesforce", "Salesforce Administration", "Salesforce Flows", "Reports and Dashboards", "Sales Cloud", "Service Cloud", "Data Loader"]},
+        {"title": "Salesforce Consultant", "skills": ["Salesforce", "Sales Cloud", "Service Cloud", "Requirement Gathering", "Solution Design", "Salesforce Flows", "Implementation"]},
+        {"title": "Zoho Developer", "skills": ["Zoho CRM", "Deluge", "Zoho Creator", "API Integration", "JavaScript", "Automation"]},
+        {"title": "Power Platform Developer", "skills": ["Power Apps", "Power Automate", "Dataverse", "SharePoint", "Power BI", "Canvas Apps", "Microsoft 365"]},
+        {"title": "ERP Consultant", "skills": ["ERP", "Implementation", "Requirement Gathering", "SAP", "Oracle", "Process Mapping", "User Training", "Data Migration"]},
+        {"title": "CRM Executive", "skills": ["CRM", "Salesforce", "Zoho CRM", "Customer Data Management", "Excel", "Reporting", "Lead Management"]}
+      ]
+    },
+    {
+      "name": "Product & Project Management",
+      "titles": [
+        {"title": "Product Manager", "skills": ["Product Management", "Product Roadmap", "User Research", "Agile", "JIRA", "Stakeholder Management", "SQL", "A/B Testing", "PRD"]},
+        {"title": "Associate Product Manager", "skills": ["Product Management", "User Research", "Agile", "JIRA", "SQL", "Wireframing", "Product Analytics", "PRD"]},
+        {"title": "Technical Product Manager", "skills": ["Product Management", "REST API", "System Design", "Agile", "JIRA", "Stakeholder Management", "SQL", "Technical Documentation"]},
+        {"title": "Product Owner", "skills": ["Product Backlog", "Scrum", "User Stories", "Agile", "JIRA", "Stakeholder Management", "Acceptance Criteria"]},
+        {"title": "Project Manager", "skills": ["Project Management", "PMP", "Agile", "Stakeholder Management", "Risk Management", "MS Project", "JIRA", "Budgeting"]},
+        {"title": "IT Project Manager", "skills": ["Project Management", "SDLC", "Agile", "Scrum", "Stakeholder Management", "JIRA", "Risk Management", "Delivery Management"]},
+        {"title": "Program Manager", "skills": ["Program Management", "Stakeholder Management", "Risk Management", "Budgeting", "Agile", "Strategic Planning", "Reporting"]},
+        {"title": "Project Coordinator", "skills": ["Project Coordination", "MS Project", "Excel", "Documentation", "Scheduling", "Stakeholder Communication", "JIRA"]},
+        {"title": "Scrum Master", "skills": ["Scrum", "Agile", "JIRA", "Sprint Planning", "Kanban", "SAFe", "Agile Coaching", "Confluence"]},
+        {"title": "Delivery Manager", "skills": ["Delivery Management", "Agile", "Stakeholder Management", "Project Management", "Resource Planning", "Risk Management"]},
+        {"title": "PMO Analyst", "skills": ["PMO", "Project Tracking", "Excel", "Power BI", "Reporting", "Project Governance", "MS Project", "Resource Planning"]},
+        {"title": "Implementation Manager", "skills": ["Implementation", "Project Management", "Client Onboarding", "SaaS", "Stakeholder Management", "Requirement Gathering", "User Training"]}
+      ]
+    },
+    {
+      "name": "Business Analysis, Strategy & Consulting",
+      "titles": [
+        {"title": "Business Systems Analyst", "skills": ["Business Analysis", "SQL", "Requirement Gathering", "System Integration", "User Stories", "UAT", "JIRA", "Process Mapping"]},
+        {"title": "Functional Consultant", "skills": ["Requirement Gathering", "Business Analysis", "Solution Design", "ERP", "Implementation", "UAT", "Documentation"]},
+        {"title": "Process Analyst", "skills": ["Process Mapping", "Process Improvement", "Lean", "Six Sigma", "Root Cause Analysis", "Excel", "Visio", "SOP Documentation"]},
+        {"title": "Management Consultant", "skills": ["Business Strategy", "Problem Solving", "Financial Analysis", "PowerPoint", "Excel", "Stakeholder Management", "Market Research"]},
+        {"title": "Strategy Analyst", "skills": ["Strategic Planning", "Market Research", "Excel", "PowerPoint", "Financial Modeling", "Competitive Analysis", "SQL"]},
+        {"title": "Business Operations Analyst", "skills": ["Excel", "SQL", "Power BI", "KPI Reporting", "Process Improvement", "Business Analysis", "Stakeholder Management"]},
+        {"title": "Revenue Operations Analyst", "skills": ["Salesforce", "Excel", "SQL", "Sales Forecasting", "CRM", "KPI Reporting", "HubSpot", "Power BI"]},
+        {"title": "Business Excellence Manager", "skills": ["Lean", "Six Sigma", "Process Improvement", "Kaizen", "Root Cause Analysis", "KPI Reporting", "Change Management"]},
+        {"title": "Six Sigma Black Belt", "skills": ["Six Sigma", "Lean", "DMAIC", "Minitab", "Root Cause Analysis", "Process Improvement", "Statistical Process Control"]},
+        {"title": "Chief of Staff", "skills": ["Strategic Planning", "Stakeholder Management", "Project Management", "PowerPoint", "Excel", "Business Operations", "Communication Skills"]}
+      ]
+    },
+    {
+      "name": "Operations",
+      "titles": [
+        {"title": "Operations Executive", "skills": ["Operations Management", "Excel", "MIS Reporting", "Coordination", "Process Improvement", "Vendor Management", "Communication Skills"]},
+        {"title": "Operations Manager", "skills": ["Operations Management", "Team Management", "Process Improvement", "KPI Reporting", "Budgeting", "Vendor Management", "Stakeholder Management"]},
+        {"title": "Business Operations Manager", "skills": ["Business Operations", "Strategic Planning", "KPI Reporting", "Stakeholder Management", "Process Improvement", "Excel", "Team Management"]},
+        {"title": "Back Office Executive", "skills": ["Data Entry", "Excel", "MS Office", "Documentation", "Typing Speed", "Record Keeping", "Email Communication"]},
+        {"title": "Control Tower Executive", "skills": ["Fleet Monitoring", "GPS Tracking", "Excel", "Escalation Management", "MIS Reporting", "Communication Skills", "Transportation Management"]},
+        {"title": "Control Tower Manager", "skills": ["Fleet Management", "Team Management", "Escalation Management", "KPI Reporting", "Transportation Management", "Stakeholder Management", "Roster Planning"]},
+        {"title": "Command Center Analyst", "skills": ["Real-Time Monitoring", "Incident Management", "Excel", "Dashboards", "Escalation Management", "Reporting"]},
+        {"title": "Process Associate", "skills": ["Process Adherence", "Data Entry", "Excel", "Customer Service", "Quality Control", "Communication Skills"]},
+        {"title": "Process Quality Analyst", "skills": ["Quality Audit", "Call Monitoring", "Excel", "Root Cause Analysis", "Feedback Sessions", "Six Sigma", "Reporting"]},
+        {"title": "Workforce Management Analyst", "skills": ["Workforce Management", "Forecasting", "Scheduling", "Excel", "Real-Time Monitoring", "Capacity Planning", "Power BI"]},
+        {"title": "Facility Manager", "skills": ["Facility Management", "Vendor Management", "Maintenance", "Budgeting", "Housekeeping", "Safety Compliance", "Team Management"]},
+        {"title": "Admin Executive", "skills": ["Office Administration", "Vendor Management", "MS Office", "Travel Management", "Record Keeping", "Coordination"]},
+        {"title": "Data Entry Operator", "skills": ["Data Entry", "Typing Speed", "Excel", "MS Office", "Attention to Detail", "Record Keeping"]}
+      ]
+    },
+    {
+      "name": "Logistics & Supply Chain",
+      "titles": [
+        {"title": "Logistics Executive", "skills": ["Logistics", "Transportation Management", "Excel", "SAP", "Documentation", "Vendor Coordination", "Shipment Tracking", "MIS Reporting"]},
+        {"title": "Logistics Coordinator", "skills": ["Logistics Coordination", "Shipment Tracking", "Excel", "Documentation", "Vendor Management", "Transportation Management", "Communication Skills"]},
+        {"title": "Logistics Manager", "skills": ["Logistics Management", "Transportation Management", "Team Management", "Vendor Management", "Cost Optimization", "SAP", "KPI Reporting"]},
+        {"title": "Logistics Analyst", "skills": ["Logistics", "Excel", "SQL", "Power BI", "Transportation Analytics", "Cost Analysis", "Route Optimization", "Reporting"]},
+        {"title": "Supply Chain Manager", "skills": ["Supply Chain Management", "Demand Planning", "Procurement", "Inventory Management", "SAP", "S&OP", "Vendor Management", "Excel"]},
+        {"title": "Supply Chain Executive", "skills": ["Supply Chain", "Inventory Management", "SAP", "Excel", "Order Management", "Vendor Coordination", "MIS Reporting"]},
+        {"title": "Supply Chain Consultant", "skills": ["Supply Chain Management", "Network Optimization", "Process Improvement", "SAP", "Data Analysis", "Stakeholder Management"]},
+        {"title": "Demand Planner", "skills": ["Demand Planning", "Forecasting", "S&OP", "Excel", "SAP APO", "Statistics", "Inventory Management", "Power BI"]},
+        {"title": "Supply Planner", "skills": ["Supply Planning", "MRP", "SAP", "Inventory Management", "Excel", "S&OP", "Production Planning"]},
+        {"title": "Production Planning Executive", "skills": ["Production Planning", "MRP", "SAP PP", "Capacity Planning", "Excel", "Scheduling", "Inventory Management"]},
+        {"title": "Inventory Analyst", "skills": ["Inventory Management", "Excel", "SAP", "Stock Reconciliation", "Inventory Control", "SQL", "Power BI", "Forecasting"]},
+        {"title": "Inventory Controller", "skills": ["Inventory Control", "Stock Audit", "SAP", "Excel", "Cycle Counting", "Warehouse Management", "Stock Reconciliation"]},
+        {"title": "Warehouse Executive", "skills": ["Warehouse Management", "WMS", "Inventory Control", "Excel", "SAP", "Dispatch Planning", "GRN", "Stock Audit"]},
+        {"title": "Warehouse Manager", "skills": ["Warehouse Management", "WMS", "Team Management", "Inventory Control", "Safety Compliance", "KPI Reporting", "SAP"]},
+        {"title": "Procurement Executive", "skills": ["Procurement", "Purchase Orders", "Vendor Management", "Negotiation", "SAP MM", "Excel", "Sourcing"]},
+        {"title": "Purchase Manager", "skills": ["Procurement", "Vendor Management", "Negotiation", "Strategic Sourcing", "Cost Reduction", "SAP", "Contract Management"]},
+        {"title": "Sourcing Specialist", "skills": ["Strategic Sourcing", "Supplier Evaluation", "Negotiation", "RFQ", "Market Research", "Excel", "Contract Management"]},
+        {"title": "Transport Manager", "skills": ["Transportation Management", "Fleet Management", "Route Optimization", "Vendor Management", "Freight Negotiation", "TMS", "Cost Optimization"]},
+        {"title": "Transport Management System Analyst", "skills": ["TMS", "Transportation Management", "SQL", "Excel", "Route Optimization", "Data Analysis", "Reporting"]},
+        {"title": "Fleet Manager", "skills": ["Fleet Management", "GPS Tracking", "Vehicle Maintenance", "Driver Management", "Fuel Management", "Cost Control", "Compliance"]},
+        {"title": "Dispatch Coordinator", "skills": ["Dispatch Planning", "Route Planning", "Shipment Tracking", "Excel", "Coordination", "Documentation", "Communication Skills"]},
+        {"title": "Last Mile Operations Manager", "skills": ["Last Mile Delivery", "Hub Operations", "Team Management", "Route Optimization", "KPI Reporting", "Rider Management", "Excel"]},
+        {"title": "Import Export Executive", "skills": ["EXIM", "Customs Clearance", "Documentation", "Incoterms", "Freight Forwarding", "Shipping", "Letter of Credit"]},
+        {"title": "Freight Forwarding Executive", "skills": ["Freight Forwarding", "Ocean Freight", "Air Freight", "Documentation", "Customs Clearance", "Freight Pricing", "Incoterms"]},
+        {"title": "Customs Clearance Executive", "skills": ["Customs Clearance", "EXIM", "ICEGATE", "HS Codes", "Documentation", "Compliance"]}
+      ]
+    },
+    {
+      "name": "Customer Success & Support",
+      "titles": [
+        {"title": "Customer Success Executive", "skills": ["Customer Success", "Client Relationship Management", "CRM", "Client Onboarding", "Excel", "Communication Skills", "Escalation Management"]},
+        {"title": "Customer Success Manager", "skills": ["Customer Success", "Account Management", "Client Retention", "Churn Reduction", "CRM", "Client Onboarding", "Stakeholder Management", "SaaS"]},
+        {"title": "Customer Success Associate", "skills": ["Customer Success", "Customer Support", "CRM", "Client Onboarding", "Communication Skills", "Email Support"]},
+        {"title": "Key Account Manager", "skills": ["Key Account Management", "Client Relationship Management", "Upselling", "Negotiation", "CRM", "Revenue Growth", "Stakeholder Management"]},
+        {"title": "Account Manager", "skills": ["Account Management", "Client Relationship Management", "Upselling", "CRM", "Negotiation", "Communication Skills", "Renewals"]},
+        {"title": "Client Servicing Executive", "skills": ["Client Servicing", "Client Relationship Management", "Communication Skills", "MS Office", "Coordination", "Escalation Management"]},
+        {"title": "Customer Support Executive", "skills": ["Customer Support", "Voice Process", "Chat Support", "Email Support", "CRM", "Communication Skills", "Problem Solving"]},
+        {"title": "Customer Service Manager", "skills": ["Customer Service", "Team Management", "Escalation Management", "CSAT", "KPI Reporting", "Process Improvement", "CRM"]},
+        {"title": "Technical Account Manager", "skills": ["Technical Account Management", "SaaS", "REST API", "Client Relationship Management", "Troubleshooting", "Stakeholder Management", "SQL"]},
+        {"title": "Onboarding Specialist", "skills": ["Client Onboarding", "SaaS", "User Training", "Product Demos", "CRM", "Communication Skills", "Documentation"]},
+        {"title": "Customer Experience Analyst", "skills": ["Customer Experience", "NPS", "CSAT", "Survey Analysis", "Excel", "Power BI", "Root Cause Analysis"]},
+        {"title": "Escalation Manager", "skills": ["Escalation Management", "Customer Service", "Root Cause Analysis", "Stakeholder Management", "CRM", "Communication Skills"]}
+      ]
+    },
+    {
+      "name": "Finance & Accounting",
+      "titles": [
+        {"title": "Accountant", "skills": ["Tally", "Accounting", "GST", "TDS", "Bank Reconciliation", "Excel", "Accounts Payable", "Balance Sheet"]},
+        {"title": "Accounts Executive", "skills": ["Tally", "Accounts Payable", "Accounts Receivable", "GST", "Bank Reconciliation", "Excel", "Invoicing", "TDS"]},
+        {"title": "Accounts Payable Executive", "skills": ["Accounts Payable", "Invoice Processing", "Vendor Reconciliation", "SAP", "Excel", "TDS", "Vendor Payments"]},
+        {"title": "Accounts Receivable Executive", "skills": ["Accounts Receivable", "Collections", "Invoicing", "Customer Reconciliation", "SAP", "Excel", "Credit Control"]},
+        {"title": "Chartered Accountant", "skills": ["Audit", "Taxation", "IND AS", "Financial Reporting", "GST", "Direct Tax", "Consolidation", "Excel"]},
+        {"title": "Finance Manager", "skills": ["Financial Planning", "Budgeting", "Financial Reporting", "Taxation", "Cash Flow Management", "Team Management", "SAP", "Compliance"]},
+        {"title": "FP&A Analyst", "skills": ["FP&A", "Budgeting", "Forecasting", "Variance Analysis", "Financial Modeling", "Excel", "Power BI", "Hyperion"]},
+        {"title": "Tax Analyst", "skills": ["GST", "Direct Tax", "TDS", "Income Tax", "Tax Compliance", "Excel", "Transfer Pricing"]},
+        {"title": "GST Executive", "skills": ["GST", "GST Returns", "Input Tax Credit", "E-invoicing", "Tally", "Excel", "Compliance"]},
+        {"title": "Internal Auditor", "skills": ["Internal Audit", "Risk Assessment", "Internal Controls", "SOX", "Audit Reports", "Excel", "Compliance"]},
+        {"title": "Payroll Executive", "skills": ["Payroll Processing", "PF", "ESIC", "TDS", "Excel", "HRMS", "Statutory Compliance"]},
+        {"title": "Investment Banking Analyst", "skills": ["Financial Modeling", "Valuation", "DCF", "M&A", "Excel", "PowerPoint", "Pitch Books"]},
+        {"title": "Treasury Analyst", "skills": ["Treasury Management", "Cash Management", "Forex", "Excel", "Banking", "Liquidity Management", "SAP"]},
+        {"title": "Cost Accountant", "skills": ["Cost Accounting", "Product Costing", "Budgeting", "Variance Analysis", "SAP", "Excel", "Inventory Valuation"]},
+        {"title": "Billing Executive", "skills": ["Billing", "Invoicing", "Excel", "Tally", "SAP", "Reconciliation", "GST"]},
+        {"title": "KYC Analyst", "skills": ["KYC", "AML", "Customer Due Diligence", "Compliance", "Documentation", "Risk Assessment"]}
+      ]
+    },
+    {
+      "name": "HR & Recruitment",
+      "titles": [
+        {"title": "HR Executive", "skills": ["Recruitment", "Onboarding", "HR Operations", "Employee Engagement", "HRMS", "Payroll Processing", "Excel", "Statutory Compliance"]},
+        {"title": "HR Generalist", "skills": ["HR Policies", "Employee Relations", "Recruitment", "Performance Management", "Payroll Processing", "Onboarding", "Labour Laws", "HRMS"]},
+        {"title": "HR Business Partner", "skills": ["HR Business Partnering", "Employee Relations", "Performance Management", "Talent Management", "Change Management", "Stakeholder Management", "HR Analytics"]},
+        {"title": "HR Manager", "skills": ["HR Strategy", "Talent Acquisition", "Employee Relations", "Performance Management", "Compensation and Benefits", "Labour Laws", "Team Management"]},
+        {"title": "Recruiter", "skills": ["Sourcing", "Screening", "Naukri RMS", "LinkedIn Recruiter", "Boolean Search", "Interview Scheduling", "Stakeholder Management", "ATS"]},
+        {"title": "Talent Acquisition Specialist", "skills": ["Talent Acquisition", "Sourcing", "LinkedIn Recruiter", "Naukri RMS", "Stakeholder Management", "Offer Negotiation", "ATS", "Employer Branding"]},
+        {"title": "IT Recruiter", "skills": ["IT Recruitment", "Technical Screening", "Sourcing", "Boolean Search", "LinkedIn Recruiter", "Naukri RMS", "ATS"]},
+        {"title": "HR Operations Executive", "skills": ["HR Operations", "Onboarding", "Exit Formalities", "HRMS", "Payroll Processing", "Employee Data Management", "Excel"]},
+        {"title": "HRIS Analyst", "skills": ["HRIS", "Workday", "SuccessFactors", "HR Analytics", "Excel", "Employee Data Management", "Reporting"]},
+        {"title": "Learning and Development Specialist", "skills": ["Training Needs Analysis", "Learning and Development", "Training Delivery", "LMS", "Content Development", "Employee Development"]},
+        {"title": "Compensation and Benefits Analyst", "skills": ["Compensation and Benefits", "Salary Benchmarking", "Excel", "Payroll Processing", "HR Analytics", "Job Evaluation"]},
+        {"title": "Employee Engagement Specialist", "skills": ["Employee Engagement", "Event Management", "Internal Communication", "Culture Building", "Engagement Surveys", "Employee Retention"]}
+      ]
+    },
+    {
+      "name": "Sales, Marketing & Business Development",
+      "titles": [
+        {"title": "Business Development Executive", "skills": ["Business Development", "Lead Generation", "Cold Calling", "B2B Sales", "Negotiation", "CRM", "Client Acquisition", "Communication Skills"]},
+        {"title": "Business Development Manager", "skills": ["Business Development", "B2B Sales", "Key Account Management", "Negotiation", "Market Research", "Revenue Growth", "CRM"]},
+        {"title": "Sales Executive", "skills": ["Sales", "Lead Generation", "Negotiation", "CRM", "Field Sales", "Target Achievement", "Communication Skills"]},
+        {"title": "Sales Manager", "skills": ["Sales Management", "Team Management", "Sales Strategy", "Target Achievement", "CRM", "Negotiation", "Channel Sales"]},
+        {"title": "Inside Sales Executive", "skills": ["Inside Sales", "Cold Calling", "Lead Qualification", "CRM", "B2B Sales", "Email Outreach", "Communication Skills"]},
+        {"title": "SaaS Sales Executive", "skills": ["SaaS Sales", "B2B Sales", "Product Demos", "CRM", "Lead Generation", "Negotiation", "Salesforce"]},
+        {"title": "Pre-Sales Consultant", "skills": ["Pre-Sales", "Solution Design", "RFP", "Product Demos", "Proposal Writing", "Requirement Gathering", "Presentation Skills"]},
+        {"title": "Sales Operations Analyst", "skills": ["Sales Operations", "Salesforce", "Excel", "Sales Forecasting", "CRM", "KPI Reporting", "Power BI"]},
+        {"title": "Digital Marketing Executive", "skills": ["Digital Marketing", "SEO", "Google Ads", "Social Media Marketing", "Google Analytics", "Content Marketing", "Meta Ads"]},
+        {"title": "Performance Marketing Manager", "skills": ["Performance Marketing", "Google Ads", "Meta Ads", "Campaign Optimization", "Google Analytics", "ROI Analysis", "Excel"]},
+        {"title": "SEO Specialist", "skills": ["SEO", "Google Search Console", "Keyword Research", "Link Building", "Google Analytics", "Technical SEO", "Content Optimization"]},
+        {"title": "Marketing Operations Specialist", "skills": ["Marketing Automation", "HubSpot", "Marketo", "CRM", "Email Marketing", "Campaign Management", "Reporting"]}
+      ]
+    }
+  ]
+}

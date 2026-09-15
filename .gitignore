@@ -1,0 +1,23 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.pyc
+
+# Your data: jobs, statuses, companies and settings. Never publish these.
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Personal files people tend to keep next to the app (company lists, notes, logs, secrets)
+.env
+*.log
+*.csv
+*.xlsx
+
+# Editor and operating-system files
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

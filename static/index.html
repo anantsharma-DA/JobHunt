@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="referrer" content="no-referrer">
+<title>JobHunt</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔎</text></svg>">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Job<span>Hunt</span></div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="jobs" data-view="new">Jobs <span class="count" data-count="new"></span></button>
+    <button class="tab" data-tab="jobs" data-view="saved">Saved <span class="count" data-count="saved"></span></button>
+    <button class="tab" data-tab="jobs" data-view="applied">Applied <span class="count" data-count="applied"></span></button>
+    <button class="tab" data-tab="jobs" data-view="hidden">Hidden <span class="count" data-count="hidden"></span></button>
+    <button class="tab" data-tab="companies">Companies</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <!-- JOBS / SAVED / APPLIED / HIDDEN -->
+  <section id="tab-jobs" class="tab-panel">
+    <form id="search-form" class="search-panel">
+      <div class="field grow f-titles">
+        <span>Job titles</span>
+        <div id="titles-picker"></div>
+      </div>
+      <div class="field grow f-skills">
+        <span>Skills / keywords</span>
+        <div id="skills-picker"></div>
+      </div>
+      <div class="field posted f-posted">
+        <span>Posted within <b id="posted-val"></b></span>
+        <input type="range" id="posted-range" min="0" max="17" step="1" value="13" aria-label="Posted within">
+        <div class="posted-scale"><span>5 min</span><span>1 day</span><span>30 days</span></div>
+        <small id="posted-note" class="posted-note"></small>
+      </div>
+      <div class="field f-cities">
+        <span>Cities <small class="inline">none picked = all of India</small></span>
+        <div id="cities-picker"></div>
+        <small id="city-note" class="city-note"></small>
+      </div>
+      <div class="search-actions">
+        <fieldset class="field">
+          <span>Search on</span>
+          <div class="check-row">
+            <label><input type="checkbox" name="source" value="linkedin"> LinkedIn</label>
+            <label><input type="checkbox" name="source" value="indeed"> Indeed</label>
+            <label><input type="checkbox" name="source" value="naukri"> Naukri</label>
+            <label><input type="checkbox" name="source" value="companies"> Company sites</label>
+          </div>
+        </fieldset>
+        <button type="submit" id="search-btn" class="btn primary big">Search</button>
+        <button type="button" id="applicants-btn" class="btn big"
+                title="Opens each Naukri job in the Jobs and Saved tabs and reads how many people applied. Counts checked in the last day are skipped.">Update Applicants (Naukri)</button>
+      </div>
+    </form>
+    <div id="progress" class="progress" hidden></div>
+    <div id="applicants-progress" class="progress applicants-progress" hidden></div>
+
+    <div class="layout">
+      <aside class="filters">
+        <div class="filters-head">
+          <h2>Filters</h2>
+          <button type="button" id="reset-filters" class="link-btn">Reset</button>
+        </div>
+
+        <div class="filter">
+          <span>Job title searched <small class="inline" id="f-title-note">all titles</small></span>
+          <div class="checks scroll" id="f-titles"></div>
+        </div>
+
+        <label class="filter">
+          <span>Search in results</span>
+          <input id="f-text" placeholder="Title or company">
+        </label>
+
+        <label class="filter">
+          <span>Minimum match <b id="f-match-val"></b></span>
+          <input type="range" id="f-match" min="0" max="100" step="5" value="0">
+        </label>
+
+        <label class="filter">
+          <span>Minimum salary <b id="f-salary-val"></b></span>
+          <input type="range" id="f-salary" min="0" max="50" step="0.5" value="0">
+          <small>Jobs with salary not disclosed are always shown.</small>
+        </label>
+
+        <label class="filter">
+          <span>Maximum applicants <b id="f-applicants-val"></b></span>
+          <input type="range" id="f-applicants" min="0" max="10" step="1" value="0">
+          <small>Jobs without an applicant count are always shown. "Over 200" counts as 201.</small>
+        </label>
+
+        <label class="filter">
+          <span>Minimum company rating <b id="f-rating-val"></b></span>
+          <input type="range" id="f-rating" min="0" max="5" step="0.1" value="0">
+          <small>AmbitionBox ratings shown by Naukri. Jobs without a rating are always shown.</small>
+        </label>
+
+        <div class="filter">
+          <span>Experience (years)</span>
+          <div class="pair">
+            <input type="number" id="f-exp-min" min="0" max="40" step="0.5" placeholder="From">
+            <input type="number" id="f-exp-max" min="0" max="40" step="0.5" placeholder="To">
+          </div>
+          <small>Jobs that don't mention experience are always shown.</small>
+        </div>
+
+        <label class="filter">
+          <span>Date posted</span>
+          <select id="f-date">
+            <option value="0">Any time</option>
+            <option value="1">Last 24 hours</option>
+            <option value="3">Last 3 days</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+        </label>
+
+        <div class="filter">
+          <span>Work mode</span>
+          <div class="checks" id="f-mode">
+            <label><input type="checkbox" value="Remote" checked> Remote</label>
+            <label><input type="checkbox" value="Hybrid" checked> Hybrid</label>
+            <label><input type="checkbox" value="On-site" checked> On-site</label>
+            <label><input type="checkbox" value="Not specified" checked> Not specified</label>
+          </div>
+        </div>
+
+        <div class="filter">
+          <span>Job type</span>
+          <div class="checks" id="f-type">
+            <label><input type="checkbox" value="Full-time" checked> Full-time</label>
+            <label><input type="checkbox" value="Part-time" checked> Part-time</label>
+            <label><input type="checkbox" value="Contract" checked> Contract</label>
+            <label><input type="checkbox" value="Internship" checked> Internship</label>
+            <label><input type="checkbox" value="Temporary" checked> Temporary</label>
+            <label><input type="checkbox" value="Not specified" checked> Not specified</label>
+          </div>
+        </div>
+
+        <div class="filter">
+          <span>City <small class="inline" id="f-city-note">all cities</small></span>
+          <input id="f-city-search" placeholder="Find a city">
+          <div class="checks scroll" id="f-cities"></div>
+        </div>
+
+        <div class="filter">
+          <span>Source</span>
+          <div class="checks" id="f-source">
+            <label><input type="checkbox" value="linkedin" checked> LinkedIn</label>
+            <label><input type="checkbox" value="indeed" checked> Indeed</label>
+            <label><input type="checkbox" value="naukri" checked> Naukri</label>
+            <label><input type="checkbox" value="company" checked> Company site</label>
+          </div>
+        </div>
+
+        <label class="filter">
+          <span>Only these companies</span>
+          <input id="f-company-include" placeholder="e.g. Deloitte, Amazon">
+        </label>
+        <label class="filter">
+          <span>Exclude companies</span>
+          <input id="f-company-exclude" placeholder="e.g. Company A, Company B">
+        </label>
+      </aside>
+
+      <div class="results">
+        <div class="results-head">
+          <span id="result-count">Loading…</span>
+          <label>Sort
+            <select id="sort">
+              <option value="match">Best match</option>
+              <option value="newest">Newest</option>
+              <option value="salary">Highest salary</option>
+              <option value="applicants">Fewest applicants</option>
+              <option value="company">Company A–Z</option>
+            </select>
+          </label>
+        </div>
+        <div id="job-list"></div>
+        <button type="button" id="more-btn" class="btn wide" hidden>Show more</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPANIES -->
+  <section id="tab-companies" class="tab-panel" hidden>
+    <div class="panel">
+      <h2>Company careers sites</h2>
+      <p class="hint">
+        Add companies to include in every search (when <b>Company sites</b> is ticked).
+        Paste the company's careers link if it is on <b>Greenhouse, Lever, Ashby, SmartRecruiters or Workday</b>
+        (open any job on their careers page; if the address contains <code>greenhouse.io</code>, <code>lever.co</code>,
+        <code>ashbyhq.com</code>, <code>smartrecruiters.com</code> or <code>myworkdayjobs.com</code>, paste it).
+        For any other careers link, the app looks inside that page for one of these platforms and reads it if found.
+        If none is found, or there is no link, it searches <b>Indeed, LinkedIn or both</b> (choose on the Settings tab) for your job titles plus the company name
+        and keeps only that company's jobs.
+      </p>
+      <form id="company-form" class="company-form">
+        <input id="company-name" placeholder="Company name" required>
+        <input id="company-url" placeholder="Careers page link (optional)">
+        <button type="submit" class="btn primary">Add company</button>
+      </form>
+      <div class="import-box">
+        <div>
+          <b>Add many companies at once</b>
+          <p class="hint">
+            Upload a CSV or Excel (.xlsx) file with two columns: <b>Company name</b> and <b>Careers link</b> (the link can be empty).
+            Companies already in your list are skipped. <a href="/api/companies/template.csv" download>Download a template</a>
+          </p>
+        </div>
+        <div class="import-actions">
+          <input type="file" id="import-file" accept=".csv,.xlsx">
+          <button type="button" id="import-btn" class="btn primary">Import file</button>
+        </div>
+        <div id="import-result" class="import-result" hidden></div>
+      </div>
+      <div class="table-wrap">
+        <table class="companies">
+          <thead><tr><th>Company</th><th>Read via</th><th>Careers link</th><th>In search</th><th>Test</th><th></th></tr></thead>
+          <tbody id="company-rows"></tbody>
+        </table>
+      </div>
+      <p id="company-empty" class="empty" hidden>No companies yet.</p>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="tab-panel" hidden>
+    <div class="panel narrow">
+      <h2>Settings</h2>
+      <form id="settings-form">
+        <label class="field">
+          <span>Results to fetch per job title, per site</span>
+          <input type="number" id="s-results" min="10" max="500" step="10">
+          <small>More results take longer. LinkedIn usually blocks after ~250 in a short time.</small>
+        </label>
+        <label class="field">
+          <span>Pause between company-site requests (seconds)</span>
+          <input type="number" id="s-delay" min="0" max="10" step="0.5">
+        </label>
+        <label class="field">
+          <span>Companies without a supported careers link are searched on</span>
+          <select id="s-company-sites">
+            <option value="indeed">Indeed only (best for long company lists)</option>
+            <option value="linkedin">LinkedIn only</option>
+            <option value="both">Indeed and LinkedIn</option>
+          </select>
+          <small>LinkedIn blocks after many searches. With a long company list, Indeed only keeps your main LinkedIn search working.</small>
+        </label>
+        <button type="submit" class="btn primary">Save settings</button>
+        <span id="settings-saved" class="saved-note" hidden>Saved</span>
+      </form>
+
+      <h2>Stored results</h2>
+      <p class="hint">Removes every job in the <b>Jobs</b> tab. Saved, applied and hidden jobs stay. Useful before searching for a different profile.</p>
+      <button type="button" id="clear-btn" class="btn danger">Clear the Jobs tab</button>
+      <span id="clear-note" class="saved-note" hidden></span>
+
+      <h2>Good to know</h2>
+      <ul class="hint list">
+        <li>Naukri blocks automated requests, so Naukri searches run in a Microsoft Edge window placed off-screen. You may see Edge in the taskbar during a search; don't close it.</li>
+        <li>LinkedIn limits how many searches it allows. If it shows "blocked", wait 30–60 minutes and search again.</li>
+        <li>Job sites change their pages from time to time. If a source stops working, update JobSpy: <code>.venv\Scripts\python -m pip install -U --no-deps python-jobspy</code></li>
+        <li>Companies with their own custom careers sites are only covered as far as they post jobs on Indeed or LinkedIn. For a long company list, choose "Indeed only" above so LinkedIn doesn't block your main search.</li>
+        <li>The app runs only while the <code>run.bat</code> window is open.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<!-- Loading screen shown while a search runs -->
+<div id="search-overlay" class="overlay" hidden>
+  <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+    <div class="spinner"></div>
+    <h2 id="overlay-title">Searching for jobs…</h2>
+    <p id="overlay-sub" class="overlay-sub">The page is locked until the search finishes.</p>
+    <div id="overlay-sources" class="overlay-sources"></div>
+    <p id="overlay-elapsed" class="overlay-elapsed"></p>
+    <button type="button" id="cancel-btn" class="btn danger">Cancel search</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" hidden>
+  <span id="toast-text"></span>
+  <button type="button" id="toast-undo" class="link-btn">Undo</button>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
