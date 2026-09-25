@@ -530,8 +530,9 @@ than ignored. The reply says what was wrong without repeating what was sent.
   are refused, and XML attacks are blocked (`defusedxml`).
 - Uploads are read in memory only: never saved to disk, never opened by another program, never run. Only their text
   is kept. File names may not contain folders or special characters.
-- Tailored PDFs get safe file names and are only served from the `data\resumes` folder. The page Edge prints has no
-  network access and may not run scripts.
+- Tailored PDFs get safe file names and are only served from the `data\resumes` folder. While Edge prints the PDF,
+  the page has no network access and may not run scripts. This doesn't affect your links: portfolio, LinkedIn, GitHub
+  and project links are saved inside the PDF as normal clickable links and open in your browser when clicked.
 
 **Error messages.** Messages JobHunt writes for you (a wrong API key, an empty Resume tab, a site blocking searches)
 tell you what to do. Anything unexpected shows only **"Something went wrong. Please try again later."**, never a stack
@@ -690,3 +691,12 @@ understood and agree to the terms below. If you do not agree, do not download or
 
 9. **Acceptance and severability.** Downloading or using the Software means you accept these terms. If any part of
    these terms is found to be invalid or unenforceable, the remaining parts continue in full force and effect.
+
+10. **Your LinkedIn, Naukri, Indeed and other accounts.** The Software never signs in to, uses or stores your LinkedIn,
+    Naukri, Indeed or any other website account, and it never applies to jobs automatically. It only reads publicly
+    visible job pages, the way anyone can without logging in. On the author's current testing and findings, the Software
+    has not caused any account to be suspended, restricted or banned, and there is no known way for its normal use to do
+    so. This reflects current findings only and is not a promise or guarantee: websites can change their rules,
+    detection and enforcement at any time and without notice. If any of your accounts is ever warned, restricted,
+    suspended, banned or otherwise affected, for any reason, the author and creator of the Software is not liable or
+    responsible in any way, and points 3, 4 and 5 above apply in full.
