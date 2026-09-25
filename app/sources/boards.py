@@ -15,7 +15,7 @@ import jobspy.indeed as indeed_module
 import jobspy.linkedin as linkedin_module
 from jobspy.model import Country, ScraperInput, Site
 
-from app import normalize
+from app import errors, normalize
 
 class _LinkedIn(linkedin_module.LinkedIn):
     """JobSpy reads the posting date only from "job-search-card__listdate". LinkedIn marks listings from the
@@ -101,12 +101,19 @@ class _LogCapture(logging.Handler):
 
 
 def friendly_error(message):
+    """A job site's failure in plain words. The scraper's own text (web addresses, library internals) is only logged."""
     text = str(message)
+    low = text.lower()
     if "429" in text:
         return "blocked for now (too many requests). Try again in 30–60 minutes"
     if "403" in text:
         return "the site refused the request (403). Try again later"
-    return text if len(text) <= 160 else text[:157] + "…"
+    if "timed out" in low or "timeout" in low:
+        return "the site took too long to answer; try again later"
+    if "connection" in low or "name resolution" in low or "getaddrinfo" in low:
+        return "the site could not be reached; check your internet connection"
+    errors.log.warning("Job site error: %s", text[:500])
+    return "the search on this site failed; try again later"
 
 
 def run_scraper(site, scraper_input, on_progress=None):

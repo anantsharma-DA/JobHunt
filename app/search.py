@@ -4,7 +4,9 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from app import db, matching, normalize
+import requests
+
+from app import db, errors, matching, normalize
 from app.sources import SearchCancelled, ats, boards, company_boards, naukri
 
 _lock = threading.Lock()
@@ -211,8 +213,12 @@ def _run_companies(titles, settings, plan):
         except SearchCancelled:
             _update("companies", state="cancelled", message=f"stopped during {company['name']}")
             return
-        except Exception as exc:
+        except ats.SourceError as exc:  # written by JobHunt, safe to show
             failed.append(f"{company['name']}: {exc}")
+        except requests.RequestException as exc:
+            failed.append(f"{company['name']}: {errors.network(exc, company['name'])}")
+        except Exception as exc:
+            failed.append(f"{company['name']}: {errors.hidden(exc, company['name'], short=True)}")
     message = f"{len(companies)} companies"
     if failed:
         message += f", {len(failed)} failed: " + "; ".join(failed[:3]) + ("…" if len(failed) > 3 else "")

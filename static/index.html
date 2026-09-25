@@ -14,12 +14,16 @@
   <div class="brand">Job<span>Hunt</span></div>
   <nav class="tabs">
     <button class="tab active" data-tab="jobs" data-view="new">Jobs <span class="count" data-count="new"></span></button>
-    <button class="tab" data-tab="jobs" data-view="saved">Saved <span class="count" data-count="saved"></span></button>
+    <button class="tab" data-tab="jobs" data-view="saved">Saved Jobs <span class="count" data-count="saved"></span></button>
     <button class="tab" data-tab="jobs" data-view="applied">Applied <span class="count" data-count="applied"></span></button>
     <button class="tab" data-tab="jobs" data-view="hidden">Hidden <span class="count" data-count="hidden"></span></button>
+    <button class="tab" data-tab="resume">Resume</button>
     <button class="tab" data-tab="companies">Companies</button>
+    <button class="tab" data-tab="interview">Interview Questions</button>
+    <button class="tab" data-tab="saved-questions">Saved Questions</button>
     <button class="tab" data-tab="settings">Settings</button>
   </nav>
+  <button type="button" id="theme-toggle" class="btn small theme-toggle" aria-pressed="false">Dark mode</button>
 </header>
 
 <main>
@@ -232,6 +236,108 @@
     </div>
   </section>
 
+  <!-- RESUME -->
+  <section id="tab-resume" class="tab-panel" hidden>
+    <div class="panel">
+      <h2>Tailored resumes</h2>
+      <p class="hint">
+        Every resume made with <b>Tailor resume</b> on a job. Open or download its PDF, or press <b>Edit</b> to change
+        the wording and make the PDF again.
+      </p>
+      <div id="tailored-list" class="tailored-list"><p class="hint">Loading…</p></div>
+
+      <h2>Your resume details</h2>
+      <p class="hint">
+        JobHunt uses these to write a resume for each job. They stay on this computer; only these details and the
+        job's description are sent to the AI service you choose on the Settings tab, and only when you press
+        <b>Tailor resume</b> on a job. The AI may only reword what is here: it is never allowed to invent
+        employers, dates, numbers or skills, and anything new is flagged for you before it reaches the PDF.
+      </p>
+
+      <div class="import-box">
+        <div>
+          <b>Start from a resume you already have</b>
+          <p class="hint">
+            Upload a PDF, Markdown or text file, or paste the text, and the AI fills in the fields below for you to
+            correct. HTML resumes that draw themselves with scripts have no readable text, so use the PDF instead.
+          </p>
+        </div>
+        <div class="import-actions">
+          <input type="file" id="resume-file" accept=".pdf,.html,.htm,.md,.txt">
+          <button type="button" id="resume-import-btn" class="btn primary">Read this file</button>
+        </div>
+        <textarea id="resume-paste" rows="3" placeholder="…or paste your resume text here"></textarea>
+        <div class="import-actions">
+          <button type="button" id="resume-paste-btn" class="btn">Read pasted text</button>
+        </div>
+        <div id="resume-import-result" class="import-result" hidden></div>
+      </div>
+
+      <form id="resume-form" class="resume-form"></form>
+
+      <div class="resume-actions">
+        <button type="button" id="resume-save" class="btn primary">Save resume details</button>
+        <span id="resume-saved" class="saved-note" hidden>Saved</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTERVIEW QUESTIONS -->
+  <section id="tab-interview" class="tab-panel" hidden>
+    <div class="panel">
+      <h2>Interview questions</h2>
+      <p class="hint">
+        Pick one or more job titles. JobHunt searches the web for questions real candidates reported being asked for
+        that role, and shows where each one was found. Questions reported on 2 or more different sites are marked
+        <b>verified</b> and listed first. Answers come from the source page when it gives one; otherwise the AI drafts
+        one, clearly labelled. Everything found is kept on the <b>Saved Questions</b> tab. Searching a job title again
+        looks for <b>new</b> questions only: it uses different search wording, skips pages already read, and shows just
+        what wasn't saved yet ("0 new questions" if there were none). For one company's questions, use
+        <b>Frequently Asked Questions</b> on a job.
+      </p>
+      <div class="iq-bar">
+        <div id="iq-picker" class="iq-picker"></div>
+        <button type="button" id="iq-find" class="btn primary">Find questions</button>
+      </div>
+      <p id="iq-status" class="hint"></p>
+      <div id="iq-results"></div>
+    </div>
+  </section>
+
+  <!-- SAVED QUESTIONS -->
+  <section id="tab-saved-questions" class="tab-panel" hidden>
+    <div class="panel">
+      <h2>Saved questions</h2>
+      <p class="hint">Every interview question JobHunt has found for you, kept across all your searches.</p>
+      <div class="segmented" role="tablist" aria-label="Which saved questions">
+        <button type="button" class="seg active" role="tab" aria-selected="true" data-saved-view="titles">
+          Profile Wise Saved Questions <span class="count" id="saved-titles-count"></span></button>
+        <button type="button" class="seg" role="tab" aria-selected="false" data-saved-view="companies">
+          Saved Frequently Asked Questions <span class="count" id="saved-companies-count"></span></button>
+      </div>
+
+      <div id="saved-view-titles" class="saved-view" role="tabpanel">
+        <p class="hint">Questions found for job titles on the <b>Interview Questions</b> tab.</p>
+        <div class="saved-filter">
+          <label for="saved-title-filter">Job title</label>
+          <select id="saved-title-filter"></select>
+        </div>
+        <p id="saved-titles-status" class="hint"></p>
+        <div id="saved-titles" class="saved-list"></div>
+      </div>
+
+      <div id="saved-view-companies" class="saved-view" role="tabpanel" hidden>
+        <p class="hint">Questions found with <b>Frequently Asked Questions</b> on a job, kept by company.</p>
+        <div class="saved-filter">
+          <label for="saved-company-filter">Company</label>
+          <select id="saved-company-filter"></select>
+        </div>
+        <p id="saved-companies-status" class="hint"></p>
+        <div id="saved-companies" class="saved-list"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- SETTINGS -->
   <section id="tab-settings" class="tab-panel" hidden>
     <div class="panel narrow">
@@ -257,6 +363,72 @@
         </label>
         <button type="submit" class="btn primary">Save settings</button>
         <span id="settings-saved" class="saved-note" hidden>Saved</span>
+      </form>
+
+      <h2>AI for resume tailoring</h2>
+      <p class="hint">
+        Only needed for <b>Tailor resume</b> and cover notes; searching for jobs works without it. Add a key for as
+        many services as you like: they are tried from the top down, so if the first is busy, out of credit or down,
+        the next one takes over. Use the arrows to change the order. Each key is kept on this computer and is sent
+        only to its own service.
+      </p>
+      <form id="ai-form" class="ai-form">
+        <div id="ai-chain" class="ai-chain"></div>
+        <div class="import-actions">
+          <button type="submit" class="btn primary">Save AI settings</button>
+          <button type="button" id="ai-test" class="btn">Test the order</button>
+          <span id="ai-saved" class="saved-note" hidden>Saved</span>
+        </div>
+      </form>
+      <div id="ai-result" class="import-result" hidden></div>
+
+      <h2>Tailoring targets</h2>
+      <p class="hint">
+        Leave both at 0 for one quick pass. With a target, <b>Tailor resume</b> keeps improving: every ticked model
+        writes a version, then the best one is revised with feedback, until the targets are reached or the rounds run
+        out. The best version is kept either way. Both scores are estimates, and nothing untrue is ever added.
+      </p>
+      <form id="targets-form" class="ai-form">
+        <label class="field">
+          <span>ATS score target (0–100)</span>
+          <input type="number" id="t-ats" min="0" max="100" step="1">
+          <small>If your details can't honestly reach it, JobHunt asks which of the advert's missing skills you really have.</small>
+        </label>
+        <label class="field">
+          <span>"Doesn't sound like AI" target (0–100%)</span>
+          <input type="number" id="t-human" min="0" max="100" step="1">
+          <small>A built-in style check averaged with an AI reviewer. A style estimate, not a real AI detector.</small>
+        </label>
+        <label class="field">
+          <span>Rounds before stopping at the best version</span>
+          <input type="number" id="t-rounds" min="1" max="10" step="1">
+        </label>
+        <div class="import-actions">
+          <button type="submit" class="btn primary">Save targets</button>
+          <span id="targets-saved" class="saved-note" hidden>Saved</span>
+        </div>
+      </form>
+
+      <h2>Web search for interview questions</h2>
+      <p class="hint">
+        Used by <b>Frequently Asked Questions</b> on each job and by the <b>Interview Questions</b> tab. A Tavily key
+        gives 1,000 free credits a month, and a search uses 2 to 4 of them because JobHunt also reads the pages it
+        finds (get one at <a href="https://app.tavily.com/" target="_blank" rel="noopener noreferrer">app.tavily.com</a>).
+        The Gemini key on its card above is tried first, but Google only lets older keys, or keys with billing switched
+        on, search for free; on newer free keys JobHunt notices and uses Tavily instead. JobHunt counts both and never
+        goes past the free limits.
+      </p>
+      <form id="search-key-form" class="ai-form">
+        <label class="field">
+          <span>Tavily API key</span>
+          <input type="password" id="tavily-key" placeholder="tvly-…" autocomplete="off" spellcheck="false">
+          <small id="tavily-note"></small>
+        </label>
+        <p id="search-usage" class="hint"></p>
+        <div class="import-actions">
+          <button type="submit" class="btn primary">Save key</button>
+          <span id="search-saved" class="saved-note" hidden>Saved</span>
+        </div>
       </form>
 
       <h2>Stored results</h2>
@@ -288,11 +460,45 @@
   </div>
 </div>
 
+<!-- Tailoring a resume to one job, and getting everything ready to apply -->
+<div id="tailor-overlay" class="overlay" hidden>
+  <div class="overlay-card wide" role="dialog" aria-modal="true" aria-labelledby="tailor-title">
+    <div class="tailor-head">
+      <h2 id="tailor-title">Tailor resume</h2>
+      <button type="button" id="tailor-close" class="link-btn">Close</button>
+    </div>
+    <div id="tailor-body" class="tailor-body"></div>
+    <div class="tailor-actions">
+      <span id="tailor-status" class="tailor-status"></span>
+      <button type="button" id="tailor-stop" class="btn danger" hidden>Stop</button>
+      <button type="button" id="tailor-again" class="btn" hidden>Tailor again</button>
+      <button type="button" id="tailor-pdf" class="btn primary" hidden>Make PDF</button>
+      <button type="button" id="tailor-anyway" class="btn danger" hidden>Use flagged wording anyway</button>
+    </div>
+  </div>
+</div>
+
+<!-- Interview questions this company asked for this role -->
+<div id="qa-overlay" class="overlay" hidden>
+  <div class="overlay-card wide" role="dialog" aria-modal="true" aria-labelledby="qa-title">
+    <div class="tailor-head">
+      <h2 id="qa-title">Frequently Asked Questions</h2>
+      <button type="button" id="qa-close" class="link-btn">Close</button>
+    </div>
+    <div id="qa-body" class="tailor-body"></div>
+    <div class="tailor-actions">
+      <span id="qa-status" class="tailor-status"></span>
+      <button type="button" id="qa-refresh" class="btn">Search again</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast" role="status" hidden>
   <span id="toast-text"></span>
   <button type="button" id="toast-undo" class="link-btn">Undo</button>
 </div>
 
 <script src="/static/app.js"></script>
+<script src="/static/resume.js"></script>
 </body>
 </html>

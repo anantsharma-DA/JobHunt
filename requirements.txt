@@ -5,6 +5,10 @@ requests>=2.31
 playwright>=1.45
 # Reads Excel (.xlsx) company lists on the Companies tab.
 openpyxl>=3.1
+# Reads text and links out of PDFs: importing your old resume, and checking the resumes JobHunt makes.
+pypdf>=5.1
+# Anthropic's official SDK, used only when you add a Claude key for resume tailoring.
+anthropic>=1.8
 # openpyxl uses this automatically to refuse malicious XML inside Excel files ("billion laughs" and similar).
 defusedxml>=0.7
 # JobSpy's own dependencies, listed here because python-jobspy 1.1.82 pins numpy 1.26.3,

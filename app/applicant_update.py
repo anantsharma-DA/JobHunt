@@ -3,7 +3,7 @@ import copy
 import threading
 from datetime import datetime, timedelta
 
-from app import db, normalize
+from app import db, errors, normalize
 from app.sources import naukri
 
 STATUSES = ("new", "saved")  # the Jobs and Saved tabs; applied and hidden jobs are skipped
@@ -106,7 +106,7 @@ def _run(jobs):
     try:
         error = naukri.fetch_applicants_many([(j["id"], naukri_url(j)) for j in jobs], _save_result, should_stop=_stop.is_set)
     except Exception as exc:
-        error = f"{exc.__class__.__name__}: {exc}"
+        error = errors.hidden(exc, "Update Applicants")
     finally:
         with _lock:
             _status.update(running=False, stopping=False, stopped=_stop.is_set(), error=error,

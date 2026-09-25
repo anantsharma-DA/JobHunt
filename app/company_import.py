@@ -13,6 +13,7 @@ MAX_COLUMNS = 20
 MAX_CELL_CHARS = 2048
 MAX_NAME_CHARS = 200
 MAX_UNZIPPED_BYTES = 50 * 1024 * 1024  # an .xlsx is a zip; refuse "zip bombs" that unpack to far more than they look
+MAX_ZIP_ENTRIES = 2000  # a company list has a few dozen parts; thousands means something else is hidden inside
 
 
 class FileProblem(ValueError):
@@ -33,12 +34,22 @@ def _cell(value):
 
 
 def read_rows(filename, data):
+    """The rows of an uploaded company list. The file is untrusted: it is read in memory only (never saved or opened by
+    another program), and its content must really be what its name says."""
     name = (filename or "").lower()
     if name.endswith(".xlsx"):
+        if not data.startswith(b"PK\x03\x04"):
+            raise FileProblem("This file is named .xlsx but isn't an Excel workbook. Save it as .xlsx or CSV and try again.")
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as archive:
-                if sum(item.file_size for item in archive.infolist()) > MAX_UNZIPPED_BYTES:
+                items = archive.infolist()
+                names = {item.filename for item in items}
+                if len(items) > MAX_ZIP_ENTRIES or sum(item.file_size for item in items) > MAX_UNZIPPED_BYTES:
                     raise FileProblem("This Excel file is too large once unpacked. Save just the company list as CSV and try again.")
+                if "[Content_Types].xml" not in names or "xl/workbook.xml" not in names:
+                    raise FileProblem("This file is named .xlsx but isn't an Excel workbook. Save it as .xlsx or CSV and try again.")
+                if any(n.lower().endswith("vbaproject.bin") for n in names):
+                    raise FileProblem("This workbook contains macros. Save a copy as a plain .xlsx (or CSV) and try again.")
         except zipfile.BadZipFile as exc:
             raise FileProblem("This Excel file couldn't be read. Save it as .xlsx or CSV and try again.") from exc
         try:
@@ -59,6 +70,8 @@ def read_rows(filename, data):
         except Exception as exc:
             raise FileProblem("This Excel file couldn't be read. Save it as .xlsx or CSV and try again.") from exc
     if name.endswith(".csv"):
+        if b"\x00" in data[:65536] or data[:4] in (b"PK\x03\x04", b"\xd0\xcf\x11\xe0") or data.startswith((b"%PDF", b"MZ")):
+            raise FileProblem("This file is named .csv but isn't a plain-text CSV. In Excel use Save As → CSV and try again.")
         text = _decode(data)
         try:
             dialect = csv.Sniffer().sniff(text[:4096], delimiters=",;\t")

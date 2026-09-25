@@ -10,7 +10,7 @@ import re
 import threading
 from urllib.parse import parse_qs, quote, urlparse
 
-from app import normalize
+from app import errors, normalize
 
 PAGE_SIZE = 20
 MAX_PAGES_PER_TITLE = 25
@@ -130,7 +130,7 @@ def _load_results(page, url, page_no):
             page.wait_for_timeout(500)
         title = page.title()
     except PlaywrightError as exc:
-        return None, f"page did not load ({str(exc).splitlines()[0][:120]})"
+        return None, _load_problem(exc, "page")
     finally:
         page.remove_listener("response", on_response)
     if title.lower().startswith("access denied"):
@@ -160,7 +160,7 @@ def search(titles, minutes_old, results_wanted, on_batch, on_progress, should_st
         try:
             browser = p.chromium.launch(channel="msedge", headless=False, args=EDGE_ARGS)
         except Exception as exc:
-            return [f"could not open Microsoft Edge ({str(exc).splitlines()[0][:120]})"]
+            return [_edge_problem(exc)]
         try:
             page = browser.new_context(locale="en-IN", viewport={"width": 1280, "height": 900}).new_page()
             runs = [(title, place) for title in titles for place in places or [{"kind": "india"}]]
@@ -250,7 +250,7 @@ def _read_applicants(page, job_url):
             return f"{count} applicants", None
         m = re.search(r"Applicants?:?\s*([\d,]+\+?)", page.inner_text("body"))
     except PlaywrightError as exc:
-        return None, f"job page did not load ({str(exc).splitlines()[0][:120]})"
+        return None, _load_problem(exc, "job page")
     finally:
         page.remove_listener("response", on_response)
     if m:
@@ -258,12 +258,24 @@ def _read_applicants(page, job_url):
     return None, NO_COUNT
 
 
+def _load_problem(exc, what):
+    """Why a Naukri page failed, in plain words; Playwright's own text (addresses, internals) goes to the log only."""
+    if "timeout" in exc.__class__.__name__.lower() or "timeout" in str(exc).lower()[:200]:
+        return f"{what} took too long to load; try again later"
+    return f"{what} did not load ({errors.hidden(exc, 'Naukri ' + what, short=True)})"
+
+
+def _edge_problem(exc):
+    errors.hidden(exc, "Opening Microsoft Edge")
+    return "could not open Microsoft Edge; check that it is installed and up to date"
+
+
 def _open_page(p):
     """Off-screen Edge window with one tab. Returns (browser, page, error message)."""
     try:
         browser = p.chromium.launch(channel="msedge", headless=False, args=EDGE_ARGS)
     except Exception as exc:
-        return None, None, f"could not open Microsoft Edge ({str(exc).splitlines()[0][:120]})"
+        return None, None, _edge_problem(exc)
     return browser, browser.new_context(locale="en-IN", viewport={"width": 1280, "height": 900}).new_page(), None
 
 

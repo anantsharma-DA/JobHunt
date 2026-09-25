@@ -675,15 +675,19 @@ function actionsHtml(job) {
     ? `<a class="btn primary" data-act="apply" href="${esc(applyUrl)}" target="_blank" rel="noopener noreferrer">${job.status === "applied" ? "Open again" : "Apply"}</a>`
     : `<span class="btn disabled">No link</span>`;
   const details = `<button class="btn small" data-act="details">Details</button>`;
+  // Written by resume.js: tailors your resume to this job and gets the application details ready.
+  const prepare = `<button class="btn small" data-act="tailor">Tailor resume</button>`;
+  // Also resume.js: interview questions this company asked for this role, found on the web.
+  const faq = `<button class="btn small" data-act="faq" title="Interview questions this company asked for this role">Frequently Asked Questions</button>`;
   switch (job.status) {
     case "saved":
-      return apply + moveButton("new", "Unsave") + moveButton("hidden", "Hide") + details;
+      return apply + moveButton("new", "Unsave") + moveButton("hidden", "Hide") + prepare + faq + details;
     case "applied":
-      return apply + `<div class="applied-mark">Applied ✓</div>` + moveButton("new", "Not applied") + details;
+      return apply + `<div class="applied-mark">Applied ✓</div>` + moveButton("new", "Not applied") + prepare + faq + details;
     case "hidden":
       return moveButton("new", "Unhide") + apply + details;
     default:
-      return apply + moveButton("saved", "Save") + moveButton("hidden", "Hide") + details;
+      return apply + moveButton("saved", "Save") + moveButton("hidden", "Hide") + prepare + faq + details;
   }
 }
 
@@ -1039,6 +1043,31 @@ $("#clear-btn").addEventListener("click", async () => {
 });
 
 /* ---------- Start ---------- */
+/* ---------- Light / dark mode ---------- */
+// The server puts data-theme="dark" on the page when that is the saved choice, so it opens in the right mode.
+function applyTheme(theme) {
+  const dark = theme === "dark";
+  if (dark) document.documentElement.dataset.theme = "dark";
+  else delete document.documentElement.dataset.theme;
+  $('meta[name="color-scheme"]').content = dark ? "dark" : "light";
+  const button = $("#theme-toggle");
+  button.textContent = dark ? "☀ Light mode" : "☾ Dark mode";
+  button.title = dark ? "Switch to light mode" : "Switch to dark mode";
+  button.setAttribute("aria-pressed", String(dark));
+}
+
+applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+
+$("#theme-toggle").addEventListener("click", async () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try {
+    await api("/api/settings", { method: "PUT", body: { theme: next } });
+  } catch (err) {
+    alert(`Could not save the ${next} mode choice: ${err.message}`);
+  }
+});
+
 /* ---------- Update Applicants (Naukri) ---------- */
 const APPLICANTS_LABEL = "Update Applicants (Naukri)";
 

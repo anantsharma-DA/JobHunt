@@ -9,7 +9,7 @@ from urllib.parse import unquote, urljoin, urlparse
 
 import requests
 
-from app import matching, normalize
+from app import errors, matching, normalize
 from app.sources import SearchCancelled
 
 HEADERS = {
@@ -124,7 +124,7 @@ def find_platform_in_page(url, timeout=15):
     except SourceError as exc:
         return None, str(exc)
     except requests.RequestException as exc:
-        return None, f"careers page could not be opened ({exc.__class__.__name__})"
+        return None, f"careers page could not be opened: {errors.network(exc, 'Careers page')}"
     text = html.unescape(page.replace("\\/", "/"))
     counts = collections.Counter()
     for link in [final_url, *_LINK_RE.findall(text)]:

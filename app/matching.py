@@ -21,6 +21,17 @@ def _term_pattern(term):
     return re.compile(r"(?<![a-z0-9])" + r"[\s\-_/]*".join(parts) + r"(?![a-z0-9])")
 
 
+def mentions(text, term):
+    """True when the text uses the term, allowing 'PowerBI', 'power-bi' and 'Power BI' to match each other."""
+    return bool(term) and bool(_term_pattern(term).search((text or "").lower()))
+
+
+def find_terms(text, terms):
+    """The terms out of `terms` that the text mentions, in the order given."""
+    lowered = (text or "").lower()
+    return [t for t in terms if _term_pattern(t).search(lowered)]
+
+
 def title_score(job_title, titles):
     """1.0 when every word of one of the wanted titles is in the job title, otherwise the best partial share."""
     job_title = (job_title or "").lower()

@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 title JobHunt
 set "PY=.venv\Scripts\python.exe"
-set "PACKAGES=fastapi, uvicorn, requests, jobspy, playwright, openpyxl, defusedxml"
+set "PACKAGES=fastapi, uvicorn, requests, jobspy, playwright, openpyxl, defusedxml, pypdf, anthropic"
 
 rem ---- 1. Is the app's Python environment usable on THIS computer? ----
 rem A .venv copied from another computer points at that computer's Python install and fails here,

@@ -3,18 +3,25 @@
 __pycache__/
 *.pyc
 
-# Your data: jobs, statuses, companies and settings. Never publish these.
+# Your data: jobs, statuses, companies, settings, API keys and tailored resumes. Never publish these.
 data/
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 
-# Personal files people tend to keep next to the app (company lists, notes, logs, secrets)
+# Personal files people tend to keep next to the app (company lists, resumes, notes, logs, secrets)
 .env
+.env.*
+*.key
+*.pem
+secrets*
 *.log
 *.csv
 *.xlsx
+*.pdf
 
 # Editor and operating-system files
 .vscode/
