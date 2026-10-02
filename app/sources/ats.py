@@ -8,6 +8,8 @@ import time
 from urllib.parse import unquote, urljoin, urlparse
 
 import requests
+import urllib3
+from requests.adapters import HTTPAdapter
 
 from app import errors, matching, normalize
 from app.sources import SearchCancelled
@@ -91,14 +93,86 @@ def is_public_web_address(url):
     return bool(addresses) and all(ipaddress.ip_address(info[4][0].split("%")[0]).is_global for info in addresses)
 
 
+class _PrivateAddress(OSError):
+    pass
+
+
+def _refused_private(exc):
+    """True when a failed request was stopped by _check_peer (urllib3 wraps the reason a few levels deep)."""
+    seen = 0
+    while exc is not None and seen < 10:
+        if isinstance(exc, _PrivateAddress) or "_PrivateAddress" in repr(getattr(exc, "args", ())):
+            return True
+        exc = exc.__cause__ or exc.__context__ or getattr(exc, "reason", None)
+        seen += 1
+    return False
+
+
+def _check_peer(sock):
+    """The address actually connected to must be public too. Checking only the name beforehand isn't enough: a site's
+    DNS can answer with a public address for the check and a private one for the connection ("DNS rebinding")."""
+    try:
+        peer = sock.getpeername()[0]
+        public = ipaddress.ip_address(peer.split("%")[0]).is_global
+    except (OSError, ValueError):
+        public = False
+    if not public:
+        sock.close()
+        raise _PrivateAddress("connection to a local or private network address refused")
+
+
+class _CheckedPeer:
+    """Checks each new connection's address. For HTTPS this runs before the TLS handshake, so nothing at all is sent
+    to a private address."""
+    def _new_conn(self):
+        sock = super()._new_conn()
+        _check_peer(sock)
+        return sock
+
+
+class _PublicHTTPConnection(_CheckedPeer, urllib3.connection.HTTPConnection):
+    pass
+
+
+class _PublicHTTPSConnection(_CheckedPeer, urllib3.connection.HTTPSConnection):
+    pass
+
+
+class _PublicHTTPPool(urllib3.HTTPConnectionPool):
+    ConnectionCls = _PublicHTTPConnection
+
+
+class _PublicHTTPSPool(urllib3.HTTPSConnectionPool):
+    ConnectionCls = _PublicHTTPSConnection
+
+
+class _PublicOnly(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        super().init_poolmanager(*args, **kwargs)
+        self.poolmanager.pool_classes_by_scheme = {"http": _PublicHTTPPool, "https": _PublicHTTPSPool}
+
+
+def _public_session():
+    session = requests.Session()
+    session.mount("http://", _PublicOnly())
+    session.mount("https://", _PublicOnly())
+    return session
+
+
 def _get_public_page(url, timeout):
     """GETs a careers page, following redirects only to public addresses and reading at most MAX_PAGE_BYTES.
     Returns (final url, status code, page text)."""
+    session = _public_session()
     for _ in range(MAX_REDIRECTS + 1):
         if not is_public_web_address(url):
             raise SourceError("careers link points to a local or private network address, so it was not opened")
-        resp = requests.get(url, headers={**HEADERS, "Accept": "text/html,application/xhtml+xml,*/*"},
-                            timeout=timeout, allow_redirects=False, stream=True)
+        try:
+            resp = session.get(url, headers={**HEADERS, "Accept": "text/html,application/xhtml+xml,*/*"},
+                               timeout=timeout, allow_redirects=False, stream=True)
+        except requests.ConnectionError as exc:
+            if _refused_private(exc):
+                raise SourceError("careers link points to a local or private network address, so it was not opened") from exc
+            raise
         try:
             if resp.is_redirect and resp.headers.get("location"):
                 url = urljoin(url, resp.headers["location"])

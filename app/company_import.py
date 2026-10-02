@@ -99,19 +99,25 @@ def _is_link_header(h):
     return any(word in h for word in ("link", "url", "career", "website", "site", "page"))
 
 
+def _roles(cell):
+    """ "Data Analyst; Business Analyst" -> ["Data Analyst", "Business Analyst"] (at most 10, 60 characters each)."""
+    return [r.strip()[:60] for r in re.split(r"[;,|]", cell or "") if r.strip()][:10]
+
+
 def parse_companies(filename, data):
-    """Returns ([{"row", "name", "careers_url"}], [problem messages]).
+    """Returns ([{"row", "name", "careers_url", "roles"}], [problem messages]).
 
     A header row is used when one of the first rows names a company column; otherwise column A is the
-    company name and column B the careers link.
+    company name and column B the careers link. An optional "Role" column tags each company (for filtering).
     """
     rows = read_rows(filename, data)
-    name_col, link_col, start = 0, 1, 0
+    name_col, link_col, role_col, start = 0, 1, None, 0
     for i, row in enumerate(rows[:5]):
         heads = [_header(c) for c in row]
         if any(_is_name_header(h) for h in heads):
             name_col = next(j for j, h in enumerate(heads) if _is_name_header(h))
             link_col = next((j for j, h in enumerate(heads) if j != name_col and _is_link_header(h)), None)
+            role_col = next((j for j, h in enumerate(heads) if j not in (name_col, link_col) and "role" in h), None)
             start = i + 1
             break
 
@@ -133,5 +139,6 @@ def parse_companies(filename, data):
         if link and normalize.safe_url(link) is None:
             problems.append(f"row {row_no} ({name}): '{link[:50]}' isn't a usable web address, added without a link")
             link = ""
-        companies.append({"row": row_no, "name": name, "careers_url": link or None})
+        roles = _roles(row[role_col]) if role_col is not None and role_col < len(row) else []
+        companies.append({"row": row_no, "name": name, "careers_url": link or None, "roles": roles})
     return companies, problems

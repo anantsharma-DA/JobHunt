@@ -1,6 +1,8 @@
 fastapi>=0.110
 uvicorn>=0.29
 requests>=2.31
+# Used directly to refuse connections to private addresses; 2.8.0 fixes PYSEC-2026-4175..4177.
+urllib3>=2.8.0
 # Naukri is read through Microsoft Edge (already on Windows), so no browser download is needed.
 playwright>=1.45
 # Reads Excel (.xlsx) company lists on the Companies tab.

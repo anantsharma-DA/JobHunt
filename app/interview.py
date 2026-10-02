@@ -12,7 +12,7 @@ import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote_plus, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -219,7 +219,8 @@ def _from_gemini(title, company, key, known=()):
                         item.setdefault("sources", [])
                         if links[index] not in item["sources"]:
                             item["sources"].append(links[index])
-    kept = [i for i in items if i.get("sources")]  # a question no web page backs is not shown
+    # A question no web page backs is not shown, nor one a forum writer asked about themself.
+    kept = [i for i in items if i.get("sources") and not bad_question(i["question"])]
     for item in kept:
         item["answer_source"] = "source" if item.get("answer") else None
     queries = [{"query": q, "url": f"https://www.google.com/search?q={quote_plus(q)}"}
@@ -243,8 +244,10 @@ EXTRACT_SCHEMA = {
 
 
 # A question on a page: a capitalised sentence ending in "?", optionally numbered ("Q3.", "12)", "-").
-_QUESTION = re.compile(r"(?<=[\n.!?:])[ \t]*(?:(?:Q|Question)\s*\d*\s*[.:)\-]\s*|\d{1,3}\s*[.)]\s*|[^\w\s.!?]{1,3}\s*)?"
-                       r"(?P<q>[A-Z][^?.!:\n]{10,220}\?)")
+# A closing quote and a "(SQL round)" note after the "?" belong to the question, not to its answer.
+_QUESTION = re.compile(r"(?<=[\n.!?:])[ \t]*(?:>[ \t]*)?"
+                       r"(?:(?:Q|Question)\s*\d*\s*[.:)\-]\s*|\d{1,3}\s*[.)]\s*|[^\w\s.!?]{1,3}\s*)?[“\"‘']?"
+                       r"(?P<q>[A-Z][^?.!:\n]{10,220}\?)(?:[ \t]*[”\"’'])?(?:[ \t]*\([^()\n]{1,40}\))?")
 # Page furniture that also ends in "?": sign-up prompts, course adverts, navigation.
 _NOT_INTERVIEW = re.compile(r"(?i)\b(course|enrol|enroll|sign ?up|subscribe|cookie|newsletter|contact us|learn more|click|"
                             r"download|free trial|webinar|want to|looking for|ready to|why choose|need help|have any questions|"
@@ -252,8 +255,11 @@ _NOT_INTERVIEW = re.compile(r"(?i)\b(course|enrol|enroll|sign ?up|subscribe|cook
                             r"rate your|how was your|got a question|are you ready|dream job|get hired|"
                             r"interview process)\b")
 # Forum posts ("Am I aiming for the right CTC?") ask about the writer; interview questions ask about you.
+# Also "What are the tools I used…?" and "Explain the blockers I got…": the writer asking about themself. "Type I
+# error" and "I and II" are statistics, not a person.
 _FIRST_PERSON = re.compile(r"^(?:Am|Should|Can|Could|Do|Did|Will|Would|Shall|Must|Have|Was|Is it ok (?:for|if)) I\b"
-                           r"|\b(?:do|am|should|can|could|will|would|did|shall) I\b|\b(?:my|I'm|I've|I am)\b")
+                           r"|\b(?:do|am|should|can|could|will|would|did|shall) I\b|\b(?:my|I'm|I've|I am)\b"
+                           r"|(?<![Tt]ype )(?<![Pp]hase )(?<![Ll]evel )\bI\b(?!/)(?!\s*(?:and|&|or|vs\.?)\s*II\b)(?![-\s]*errors?\b)")
 # Tavily writes each picture on a page as "Image 13" or "Image 25: BFSI Logo", glued to the menu text around it.
 _IMAGE = re.compile(r"Image\s*\d+\s*:?")
 # Page furniture between a question and the next one ("Add your answer", "Share", "1 Comment", "View answers (4)").
@@ -273,6 +279,22 @@ _NOT_ANSWER = re.compile(r"^(?:\d{1,3}\s*[.)]\s|Q\s*\d*\s*[.:]|Describe|Explain|
 # A real question asks something; forum and news titles ("TCS reaching out to ex-employees?") often don't.
 _ASKS = re.compile(r"(?i)\b(?:what|how|why|when|where|which|who|whom|whose|can|could|do|does|did|is|are|was|were|have|has|"
                    r"will|would|should|explain|describe|tell|walk|difference)\b")
+# Where the next question starts inside an answer's text: "… sample. 3. Define structured data.", "> 3. “Walk me …",
+# "Q4. What …". Numbered points that are part of the answer ("1. Descriptive 2. Diagnostic") don't start with one of
+# these words, so they stay.
+_NEXT_ITEM = re.compile(r"(?:^|\s)(?:>\s*)?(?:Q(?:uestion)?\s*\d{1,3}\s*[.:)\-]|\d{1,3}\s*[.)])\s*[“\"‘']?\s*"
+                        r"(?=(?:What|How|Why|Which|When|Where|Who|Describe|Explain|Define|Write|Tell|Walk|Give|Given|"
+                        r"Compare|Discuss|Design|Implement|Can|Could|Do|Does|Is|Are|List|Name|Differentiate|"
+                        r"Distinguish|State|Mention|Have|Suppose|Imagine)\b)")
+# A quoted list of other questions ("> 3. “Walk me …”") or text that starts in the middle of something.
+_ANSWER_START_JUNK = re.compile(r"^[\s”\"’'>)\]:;,.\-–—]+")
+# Page furniture glued to the end of an answer: "… pipelines Answered by", "… Read more", "View 3 more answers".
+_ANSWER_TAIL = re.compile(r"(?i)\s*\b(?:answered by|asked by|read more|read full answer|view (?:full |all |\d+ more )?answers?|"
+                          r"show more|see more|continue reading|was this (?:answer )?helpful|helpful\s*\?|upvote|"
+                          r"report this|add (?:your )?answer)\b[^.!?]{0,40}$")
+# A site's shortened preview: "… extraction, transformation, and loading....", "… requiring…".
+_CUT_OFF = re.compile(r"(?:\.{3,}|…)\s*$")
+ANSWER_CAP = 1500  # characters; longer answers end at the last full sentence that fits
 MAX_PER_PAGE = 25
 # Raised when the way pages are read changes, so results saved by an older reader (with menu text as "answers")
 # are searched again instead of being shown.
@@ -299,26 +321,79 @@ def _junk_line(line):
     return len(line.split()) <= 8 and bool(_FURNITURE.search(line))
 
 
-def _answer_text(chunk):
-    """The answer written under a question: the prose lines that follow it, up to the first line of page furniture.
+def bad_question(question):
+    """A forum writer asking about themself, or a fragment of a sentence that quotes a question
+    ('Answers questions such as "What happened?') rather than a question of its own."""
+    if _FIRST_PERSON.search(question):
+        return True
+    return question.count("“") != question.count("”") or question.count('"') % 2 == 1
 
-    Returns None when what follows isn't an answer (a menu, a forum post's header, the next list item).
-    """
-    kept = []
-    for line in _ANSWER_LEAD.sub("", (chunk or "").lstrip()).split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        if _junk_line(line):
-            break
-        kept.append(line)
-    answer = " ".join(" ".join(kept).split())[:600]
+
+def cut_off(answer):
+    """True when an answer is a site's shortened preview ("… and loading....") rather than the whole answer."""
+    return bool(answer) and bool(_CUT_OFF.search(answer))
+
+
+def _drop_heading_tail(text):
+    """Drops a section heading left at the end ("… large enough sample. Statistical and Mathematical Concepts")."""
+    end = max(text.rfind(". "), text.rfind("? "), text.rfind("! "))
+    if end <= 0:
+        return text
+    tail = text[end + 2:].split()
+    if tail and len(tail) <= 8 and sum(w[:1].isupper() or not w[:1].isalpha() for w in tail) >= len(tail) * 0.75 \
+            and not re.search(r"[.!?:)”\"]$", tail[-1]):
+        return text[:end + 1]
+    return text
+
+
+def fit(text, limit=ANSWER_CAP):
+    """At most `limit` characters, ending at a full sentence (or at least a whole word), never mid-word.
+    Also used for practice feedback lines."""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
+    return cut[:end + 1] if end > limit // 3 else cut.rsplit(" ", 1)[0]
+
+
+def tidy_answer(answer):
+    """An answer cleaned of what a page glues around it: a stray quote or the rest of a question list in front, the
+    next numbered question and furniture ("Answered by", "Read more") after. None when nothing usable is left.
+    Used on new answers and to repair saved ones."""
+    answer = _ANSWER_START_JUNK.sub("", " ".join(str(answer or "").split()))
+    answer = _ANSWER_LEAD.sub("", answer)
+    if answer.startswith("("):  # "(Python/statistics round) > 3. …": a note on the question before, not an answer
+        answer = _ANSWER_START_JUNK.sub("", re.sub(r"^\([^()]{1,40}\)", "", answer))
+    nxt = _NEXT_ITEM.search(answer)
+    if nxt:
+        if nxt.start() == 0:
+            return None  # it is the next question
+        answer = _drop_heading_tail(answer[:nxt.start()].rstrip())
+    answer = _ANSWER_TAIL.sub("", answer).strip()
+    answer = fit(answer)
     words = answer.split()
-    if len(answer) < 40 or _NOT_ANSWER.search(answer):
+    if len(answer) < 40 or _NOT_ANSWER.search(answer) or not answer[:1].isalnum():
         return None
     if sum(w[:1].islower() for w in words) < len(words) * 0.4:
         return None  # mostly Capitalised Words: a menu or a list of links, not a sentence
     return answer
+
+
+def _answer_text(chunk):
+    """The answer written under a question: the prose lines that follow it, up to the first line of page furniture
+    or the next numbered question.
+
+    Returns None when what follows isn't an answer (a menu, a forum post's header, the next list item).
+    """
+    kept = []
+    for line in _ANSWER_LEAD.sub("", _ANSWER_START_JUNK.sub("", chunk or "")).split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        if _junk_line(line) or (kept and line.startswith(">")):
+            break  # furniture, or a quoted list of other questions
+        kept.append(line)
+    return tidy_answer(" ".join(kept))
 
 
 def _other_company(asked_in, company):
@@ -342,7 +417,7 @@ def _questions_from_page(url, text, company=None, answers=True):
     for i, match in enumerate(matches):
         question = _clean_question(" ".join(match.group("q").split()))
         if (not question[:1].isupper() or not 5 <= len(question.split()) <= 40 or _NOT_INTERVIEW.search(question)
-                or _FIRST_PERSON.search(question) or not _ASKS.search(question)):
+                or bad_question(question) or not _ASKS.search(question)):
             continue
         above = [line.strip() for line in text[max(0, match.start() - 200):match.start()].split("\n") if line.strip()]
         asked_in = _ASKED_IN.search(above[-1]) if above else None
@@ -355,7 +430,7 @@ def _questions_from_page(url, text, company=None, answers=True):
             continue
         seen.add(key)
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-        answer = _answer_text(text[match.end():min(end, match.end() + 1500)]) if answers else None
+        answer = _answer_text(text[match.end():min(end, match.end() + 4000)]) if answers else None
         found.append({"question": question, "answer": answer, "answer_source": "source" if answer else None,
                       "sources": [{"url": url, "site": _site(url)}]})
         if len(found) >= MAX_PER_PAGE:
@@ -402,16 +477,10 @@ def _extract(pages, key, depth):
 
 def _read_directly(page):
     """Opens the page like a browser would (public addresses only, at most 2 MB) and keeps its visible text."""
-    try:
-        _, status, html_text = ats._get_public_page(page["url"], 20)
-    except (ats.SourceError, requests.RequestException):
+    html_text = _open(page["url"])
+    if html_text is None:
         return
-    if status != 200:
-        return
-    soup = BeautifulSoup(html_text, "html.parser")
-    for tag in soup(["script", "style", "noscript", "svg", "nav", "footer"]):
-        tag.decompose()
-    text = "\n".join(line.strip() for line in soup.get_text("\n").split("\n") if line.strip())
+    text = _visible_text(html_text)[1]
     if len(text) >= FULL_TEXT and len(text) > len(page["text"]):
         page["text"] = text
 
@@ -530,7 +599,7 @@ def _from_tavily(title, company, key, steps, round_no=0, seen=None):
             continue
         question = " ".join(str(item.get("question") or "").split())[:400]
         homes = [p["url"] for p in pages if question and _found_in(question, p["body"])]
-        if not homes or _FIRST_PERSON.search(question) or _NOT_INTERVIEW.search(question):
+        if not homes or bad_question(question) or _NOT_INTERVIEW.search(question):
             continue  # on none of the pages (the AI made it up), or not an interview question
         answer = _answer_text(str(item.get("answer") or ""))
         kept.append({"question": question, "answer": answer, "answer_source": "source" if answer else None,
@@ -561,13 +630,124 @@ def _twin(item, questions):
     return next((q for q in questions if difflib.SequenceMatcher(None, _norm(q["question"]), key).ratio() >= 0.85), None)
 
 
+def _better_answer(new, old):
+    """True when `new` should replace `old`: there was none, or `old` is only an AI draft or a cut-off preview and
+    `new` is a whole answer from a page."""
+    if not new.get("answer"):
+        return False
+    if not old.get("answer"):
+        return True
+    if new.get("answer_source") != "source":
+        return False
+    return old.get("answer_source") != "source" or (cut_off(old["answer"]) and not cut_off(new["answer"]))
+
+
 def _absorb(match, item):
-    """Adds `item`'s sources (and its answer, if `match` has none) to the same question found before."""
+    """Adds `item`'s sources (and its answer, when it is better) to the same question found before."""
     for source in item.get("sources") or []:
         if source not in match["sources"]:
             match["sources"].append(source)
-    if not match.get("answer") and item.get("answer"):
+    if _better_answer(item, match):
         match["answer"], match["answer_source"] = item["answer"], item.get("answer_source")
+
+
+# Links next to a question that lead to its whole answer.
+_MORE_LINK = re.compile(r"(?i)\b(?:read more|read full|view (?:full |all )?answers?|see (?:the )?answers?|show (?:more|answer)|"
+                        r"more answers?|full answer|continue reading)\b")
+FULL_ANSWER_PAGES = 12  # pages opened per search (or per saved set being repaired) to finish cut-off answers
+
+
+def _visible_text(html_text):
+    """(parsed page, its visible text one line per block), without scripts, menus and footers."""
+    soup = BeautifulSoup(html_text, "html.parser")
+    for tag in soup(["script", "style", "noscript", "svg", "nav", "footer"]):
+        tag.decompose()
+    return soup, "\n".join(line.strip() for line in soup.get_text("\n").split("\n") if line.strip())
+
+
+def _whole_answer_on(url, text, question):
+    """The question's answer as read from this page's text, if the page has it whole."""
+    for item in _questions_from_page(url, text):
+        if item.get("answer") and not cut_off(item["answer"]) and \
+                difflib.SequenceMatcher(None, _norm(item["question"]), _norm(question)).ratio() >= 0.85:
+            return item["answer"]
+    return None
+
+
+def _open(url):
+    """The page's HTML, opened like a browser would (public addresses only, at most 2 MB), or None."""
+    try:
+        _, status, html_text = ats._get_public_page(url, 20)
+    except (ats.SourceError, requests.RequestException):
+        return None
+    return html_text if status == 200 else None
+
+
+def full_answer(question, url):
+    """The whole answer to a question whose page showed only a preview ("… and loading...."). Opens the page, and
+    then the link beside the question that leads to its full answer (the question itself, "Read more", "View
+    answer"), on the same site only. None when neither has it."""
+    html_text = _open(url)
+    if html_text is None:
+        return None
+    soup, text = _visible_text(html_text)
+    answer = _whole_answer_on(url, text, question)
+    if answer:
+        return answer
+    key = _norm(question)
+    spot = None
+    for tag in soup.find_all(["a", "h1", "h2", "h3", "h4", "h5", "h6", "p", "span", "strong", "b", "div", "li"]):
+        own = _norm(tag.get_text(" "))
+        if own and len(own) <= len(key) * 1.5 and difflib.SequenceMatcher(None, own, key).ratio() >= 0.85:
+            spot = tag
+            break
+    if spot is None:
+        return None
+    links, node = [], spot
+    for _ in range(6):  # the question's own link first, then "Read more" links in ever larger boxes around it
+        if node is None:
+            break
+        anchors = [node] if node.name == "a" else []
+        anchors += node.find_all("a", href=True) if hasattr(node, "find_all") else []
+        for a in anchors:
+            href = a.get("href")
+            label = " ".join(a.get_text(" ").split())
+            if not href or href.startswith(("#", "javascript:", "mailto:")):
+                continue
+            if a is spot or _MORE_LINK.search(label) or (label and _norm(label) == key):
+                link = normalize.safe_url(urljoin(url, href))
+                if link and link != url and _site(link) == _site(url) and link not in links:
+                    links.append(link)
+        if links:
+            break
+        node = node.parent
+    for link in links[:2]:
+        page = _open(link)
+        if page is not None:
+            answer = _whole_answer_on(link, _visible_text(page)[1], question)
+            if answer:
+                return answer
+    return None
+
+
+def _finish_cut_off(questions):
+    """Replaces site previews that stop mid-answer with the whole answer from the source page; when no page has
+    it, the preview is removed so an AI draft (clearly labelled) takes its place."""
+    todo = [q for q in questions if q.get("answer_source") == "source" and cut_off(q.get("answer"))]
+
+    def finish(question):
+        for source in (question.get("sources") or [])[:2]:
+            whole = full_answer(question["question"], source.get("url"))
+            if whole:
+                return whole
+        return None
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for question, whole in zip(todo[:FULL_ANSWER_PAGES], pool.map(finish, todo[:FULL_ANSWER_PAGES])):
+            question["answer"] = whole
+            question["answer_source"] = "source" if whole else None
+    for question in todo[FULL_ANSWER_PAGES:]:
+        question["answer"], question["answer_source"] = None, None
 
 
 def _count_sites(question):
@@ -657,6 +837,65 @@ def all_saved():
     return out
 
 
+# Raised when the answer checks change, so saved questions are cleaned again (in place, without a new search).
+CLEANER = 1
+OLD_ANSWER_CAP = 600  # where readers before CLEANER 1 cut answers off
+
+
+def repair_saved(steps, profile):
+    """Cleans questions saved before the current answer checks: drops questions the writer asked about themself
+    ("What are the tools I used…"), trims answers glued to the next question or to page furniture, replaces cut-off
+    previews with the whole answer from the source page, and has the AI draft (labelled) what is still missing.
+    The questions keep their wording, so practice history stays with them, and the saved date doesn't change.
+    Returns the number of saved sets cleaned."""
+    cleaned = 0
+    for row in db.list_interview_qa():
+        if row.get("reader") != READER or row.get("cleaned") == CLEANER:
+            continue
+        scope = row.pop("scope", None) or scope_for(row["title"], row.get("company"))
+        row.pop("saved_at", None)
+        before = json.dumps(row, sort_keys=True)
+        questions = []
+        for question in row.get("questions") or []:
+            if bad_question(question.get("question") or ""):
+                continue
+            if question.get("answer_source") == "source" and question.get("answer"):
+                raw = question["answer"]
+                # Earlier readers stopped every answer at 600 characters, often mid-sentence ("… requiring ").
+                capped = len(raw) >= OLD_ANSWER_CAP - 1 and not re.search(r"[.!?)”\"]\s*$", raw)
+                was_cut = cut_off(raw) or capped
+                tidy = tidy_answer(raw)
+                if tidy and capped:
+                    end = max(tidy.rfind(". "), tidy.rfind("? "), tidy.rfind("! "), tidy.rfind("."))
+                    if end > len(tidy) // 3:
+                        question["_sentences"] = tidy[:end + 1]  # the whole sentences, if no page has the rest
+                if tidy and was_cut and not cut_off(tidy):
+                    tidy += "…"  # still only a preview; the mark makes the whole answer be looked for below
+                question["answer"] = tidy
+                question["answer_source"] = "source" if tidy else None
+            questions.append(question)
+        _finish_cut_off(questions)
+        for question in questions:
+            sentences = question.pop("_sentences", None)
+            if sentences and not question.get("answer"):
+                question["answer"], question["answer_source"] = sentences, "source"
+        problem = None
+        try:
+            model, problem = draft_answers(questions, row["title"], profile, steps)
+        except Exception as exc:  # the AI may be busy; the questions are still saved cleaned, without those answers
+            model, problem = None, f"answers could not be drafted: {exc}"
+        row.update(questions=questions, cleaned=CLEANER, answers_by=model or row.get("answers_by"),
+                   answers_problem=problem)
+        with db._lock:  # a search of the same set may have saved meanwhile; then this is left for the next start
+            current = db.get_interview_qa(scope) or {}
+            current.pop("saved_at", None)
+            if json.dumps(current, sort_keys=True) != before:
+                continue
+            db.save_interview_qa(scope, row, keep_date=True)
+        cleaned += 1
+    return cleaned
+
+
 def find(title, company, steps, profile, refresh=False):
     """Interview questions for a role (and company).
 
@@ -705,6 +944,7 @@ def find(title, company, steps, profile, refresh=False):
         else:  # asked again on another site: it may now be verified, but it isn't new
             _absorb(twin, question)
             _count_sites(twin)
+    _finish_cut_off(new)
     answer_model, answer_problem = draft_answers(new, title, profile, steps)
     today = date.today().isoformat()
     for question in new:
@@ -718,7 +958,8 @@ def find(title, company, steps, profile, refresh=False):
                 f"Search again later; each search looks from a different angle.")
     else:
         note = f"0 questions found: the search worked, but the pages it found didn't list interview questions. {hint}"
-    data = {"reader": READER, "title": title, "company": company, "questions": old + new,
+    data = {"reader": READER, "cleaned": (saved or {}).get("cleaned") if old else CLEANER,
+            "title": title, "company": company, "questions": old + new,
             "searched_with": searched_with, "google_searches": ((saved or {}).get("google_searches") or []) + queries,
             "answers_by": answer_model or (saved or {}).get("answers_by"), "answers_problem": answer_problem,
             "searches": round_no + 1, "read_pages": sorted(seen)[-400:]}

@@ -87,10 +87,11 @@ function renderResume() {
   parts.push(`<fieldset class="r-group"><legend>Work experience</legend>
     ${p.experience.map((job, i) => entryBox(`${job.role || "Role"} · ${job.company || "Company"}`, `experience.${i}`,
       field("Company", `experience.${i}.company`, job.company) +
-      field("Role", `experience.${i}.role`, job.role) +
+      field("Role (current title)", `experience.${i}.role`, job.role) +
       field("From", `experience.${i}.start`, job.start, { placeholder: "Mar 2023" }) +
       field("To", `experience.${i}.end`, job.end, { placeholder: "Present" }) +
       field("Location", `experience.${i}.location`, job.location) +
+      positionsHtml(job, i) +
       area("What you did", `experience.${i}.bullets`, (job.bullets || []).join("\n"), 5, "one point per line"))).join("")}
     <button type="button" class="btn small" data-add="experience">Add job</button></fieldset>`);
 
@@ -126,10 +127,27 @@ function renderResume() {
   $("#resume-form").innerHTML = parts.join("");
 }
 
+/* Promotions: each title held at one company, with its own dates; the PDF lists them under the company. */
+function positionsHtml(job, i) {
+  const rows = (job.positions || []).map((pos, j) => `<div class="r-position">
+      ${field("Title", `experience.${i}.positions.${j}.title`, pos.title, { placeholder: "Senior Executive" })}
+      ${field("From", `experience.${i}.positions.${j}.start`, pos.start, { placeholder: "Jun 2024" })}
+      ${field("To", `experience.${i}.positions.${j}.end`, pos.end, { placeholder: "May 2025" })}
+      <button type="button" class="link-btn" data-remove="experience.${i}.positions.${j}">Remove</button></div>`).join("");
+  return `<div class="r-positions"><p class="hint"><b>Positions at this company</b> (promotions), newest first. Leave
+      empty if you had one title; the PDF then shows the Role above.</p>${rows}
+    <button type="button" class="btn small" data-add="experience.${i}.positions">Add position</button></div>`;
+}
+
+function getPath(target, path) {
+  return path.split(".").reduce((node, key) => node[/^\d+$/.test(key) ? Number(key) : key], target);
+}
+
 const BLANKS = {
   links: { label: "", url: "" },
   skills: { group: "", items: [] },
-  experience: { company: "", role: "", start: "", end: "", location: "", bullets: [] },
+  experience: { company: "", role: "", start: "", end: "", location: "", bullets: [], positions: [] },
+  positions: { title: "", start: "", end: "" },
   projects: { name: "", link: "", bullets: [] },
   education: { school: "", degree: "", year: "", details: "" },
   certifications: { name: "", issuer: "", year: "" },
@@ -150,10 +168,13 @@ $("#resume-form").addEventListener("click", (e) => {
   const add = e.target.closest("[data-add]");
   const remove = e.target.closest("[data-remove]");
   if (add) {
-    resumeState.profile[add.dataset.add].push({ ...BLANKS[add.dataset.add] });
+    // "experience" adds a job; "experience.0.positions" adds a position to the first job.
+    const list = getPath(resumeState.profile, add.dataset.add);
+    list.push(structuredClone(BLANKS[add.dataset.add.split(".").pop()]));
   } else if (remove) {
-    const [section, index] = remove.dataset.remove.split(".");
-    resumeState.profile[section].splice(Number(index), 1);
+    const parts = remove.dataset.remove.split(".");
+    const index = Number(parts.pop());
+    getPath(resumeState.profile, parts.join(".")).splice(index, 1);
   } else {
     return;
   }
@@ -442,6 +463,7 @@ $("#tailor-close").addEventListener("click", closeTailor);
 
 function tailorButtons({ pdf = false, again = false, stop = false } = {}) {
   $("#tailor-pdf").hidden = !pdf;
+  $("#tailor-design-box").hidden = !pdf;
   $("#tailor-again").hidden = !again;
   $("#tailor-stop").hidden = !stop;
   $("#tailor-anyway").hidden = true;
@@ -453,6 +475,8 @@ async function openTailor(job) {
   tailorButtons();
   $("#tailor-status").textContent = "";
   $("#tailor-body").innerHTML = `<p class="hint">Looking for a saved version…</p>`;
+  const settings = await api("/api/settings").catch(() => ({}));
+  $("#tailor-design").value = settings.resume_design || "modern"; // a saved draft below may bring its own design
   const run = await api("/api/tailor-run/status").catch(() => null);
   if (run && run.running && run.job_id === job.id) return pollRun(); // still working on this job from before
   const saved = await api(`/api/jobs/${job.id}/tailor`).catch(() => null);
@@ -486,6 +510,7 @@ function showTailorError(message) {
 
 function renderTailor(result, statusText) {
   $("#tailor-body").innerHTML = draftEditorHtml(result) + applyPackHtml();
+  if (result.design) $("#tailor-design").value = result.design; // the design last used for this job, or your default
   $("#tailor-status").textContent = statusText;
   tailorButtons({ pdf: true, again: true });
   $("#tailor-pdf").textContent = "Make PDF";
@@ -553,19 +578,40 @@ async function pollRun() {
     resumeState.runTimer = setTimeout(pollRun, 1500);
     return;
   }
+  if (s.stopped) return showStopped();
   if (!s.result) return showTailorError(s.error || "No version could be written.");
   const r = s.result;
   resumeState.tailor = r;
   const t = r.targets;
   const scores = [t.ats ? `ATS ${r.ats.score} of ${t.ats}` : `ATS ${r.ats.score}`,
     r.human ? (t.human ? `human ${r.human.score} of ${t.human}` : `human ${r.human.score}`) : ""].filter(Boolean).join(" · ");
-  const outcome = r.met ? "Target met" : s.stopped ? "Stopped; best version so far" : `Best after ${s.log.length} round${s.log.length > 1 ? "s" : ""}`;
+  const outcome = r.met ? "Target met" : `Best after ${s.log.length} round${s.log.length > 1 ? "s" : ""}`;
   renderTailor(r, `${outcome}: ${scores} · ${r.model}${s.error ? ` · ${s.error}` : ""}`);
 }
 
+// A stopped run keeps nothing: the resume tailored earlier for this job (if any) is shown again, unchanged.
+async function showStopped() {
+  clearTimeout(resumeState.runTimer);
+  const job = resumeState.job;
+  const note = "Stopped. Nothing from this run was saved";
+  const saved = job ? await api(`/api/jobs/${job.id}/tailor`).catch(() => null) : null;
+  if ($("#tailor-overlay").hidden) return;
+  if (saved && saved.draft) {
+    resumeState.tailor = saved;
+    renderTailor(saved, `${note}; this is your earlier version from ${new Date(saved.created_at).toLocaleString()}, unchanged.`);
+  } else {
+    $("#tailor-body").innerHTML = `<p class="hint">${note}, and there was no earlier version for this job. Press <b>Tailor again</b> to start over.</p>`;
+    $("#tailor-status").textContent = "";
+    tailorButtons({ again: true });
+  }
+}
+
 $("#tailor-stop").addEventListener("click", async () => {
+  clearTimeout(resumeState.runTimer);
   $("#tailor-stop").hidden = true;
+  $("#tailor-status").textContent = "Stopping…";
   await api("/api/tailor-run/stop", { method: "POST" }).catch(() => null);
+  showStopped();
 });
 
 $("#tailor-again").addEventListener("click", () => resumeState.job && runTailor(resumeState.job));
@@ -580,7 +626,7 @@ async function makePdf(acceptFlags) {
   try {
     const result = await api(`/api/jobs/${job.id}/resume`, {
       method: "POST",
-      body: { draft: collectDraft(), accept_flags: acceptFlags },
+      body: { draft: collectDraft(), accept_flags: acceptFlags, design: $("#tailor-design").value },
     });
     if (result.shortened) {
       // Every resume is one page: this one ran over, so the AI cut it. Nothing is printed until you check it.
@@ -642,6 +688,8 @@ async function loadApplyPack(jobId) {
     <p class="hint">JobHunt does not send applications for you: open the job's own page and paste these in.</p>
     <div class="pack-row">${apply}</div>
     <div class="pack-row">${file}</div>
+    <div class="pack-row"><button type="button" class="btn small" data-pack-outreach>Referral and recruiter messages</button>
+      <span class="hint">Ask someone at the company to refer you, or write to the recruiter.</span></div>
     <ul class="pack-answers">${answers || "<li class='hint'>Fill in the Resume tab to have answers ready.</li>"}</ul>
     <div class="pack-note">
       <div class="pack-row"><b>Cover note</b>
@@ -653,10 +701,15 @@ async function loadApplyPack(jobId) {
 }
 
 /* Same as Apply on a job card: the job moves to the Applied tab (the card's toast offers Undo). */
-async function markApplied(link) {
+async function markApplied(link, event) {
   const id = resumeState.job.id;
   const job = state.jobs.find((j) => j.id === id);
   if (job && job.status === "applied") return;
+  if (job && job.already_applied
+      && !confirm(`You applied to ${job.title} at ${job.company} on ${shortDate(job.already_applied.on)}. Apply again?`)) {
+    event.preventDefault(); // cancelled: the apply page doesn't open
+    return;
+  }
   if (job) {
     setTimeout(() => setStatus(job, "applied"), 0);
   } else {
@@ -684,8 +737,9 @@ $("#tailor-body").addEventListener("click", async (e) => {
   }
   const copy = e.target.closest("[data-copy]");
   if (copy) return copyText(copy.dataset.copy, copy);
+  if (e.target.closest("[data-pack-outreach]")) return openOutreach(resumeState.job); // insights.js
   const apply = e.target.closest("[data-pack-apply]");
-  if (apply) return markApplied(apply); // the link itself opens the apply page in a new tab
+  if (apply) return markApplied(apply, e); // the link itself opens the apply page in a new tab
   if (e.target.closest("[data-copy-note]")) return copyText($("#note-text").value, e.target);
   if (!e.target.closest("#note-write")) return;
   const button = e.target;
@@ -791,6 +845,7 @@ async function loadTargets() {
   $("#t-ats").value = s.ats_target || 0;
   $("#t-human").value = s.human_target || 0;
   $("#t-rounds").value = s.tailor_rounds || 3;
+  $("#t-design").value = s.resume_design || "modern";
 }
 
 $("#targets-form").addEventListener("submit", async (e) => {
@@ -799,7 +854,8 @@ $("#targets-form").addEventListener("submit", async (e) => {
   try {
     await api("/api/settings", {
       method: "PUT",
-      body: { ats_target: number("#t-ats", 0), human_target: number("#t-human", 0), tailor_rounds: number("#t-rounds", 3) },
+      body: { ats_target: number("#t-ats", 0), human_target: number("#t-human", 0), tailor_rounds: number("#t-rounds", 3),
+        resume_design: $("#t-design").value },
     });
     const note = $("#targets-saved");
     note.hidden = false;
@@ -825,7 +881,25 @@ function renderSearchSettings(s) {
 async function loadSearchSettings() {
   const s = await api("/api/interview/settings").catch(() => null);
   if (s) renderSearchSettings(s);
+  const settings = await api("/api/settings").catch(() => null);
+  if (settings) {
+    $("#min-faq").value = settings.faq_min_questions ?? 10;
+    $("#min-iq").value = settings.iq_min_questions ?? 10;
+  }
 }
+
+$("#minimum-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const value = (id) => Math.max(0, Math.min(30, Math.round(Number($(id).value) || 0)));
+  try {
+    await api("/api/settings", { method: "PUT", body: { faq_min_questions: value("#min-faq"), iq_min_questions: value("#min-iq") } });
+  } catch (err) {
+    return alert(err.message);
+  }
+  const note = $("#minimum-saved");
+  note.hidden = false;
+  setTimeout(() => (note.hidden = true), 2500);
+});
 
 $("#search-key-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -885,7 +959,9 @@ function qaHtml(r, { onlyNew = false } = {}) {
       + (r.searched_with ? ` · found with ${esc(r.searched_with)}` : "");
   }
   const items = qaListHtml(shown);
+  const short = r.below_minimum ? `<p class="qa-short"><span class="chip warn">below your minimum</span> ${esc(r.below_minimum)}</p>` : "";
   return `<p class="hint">${head}</p>
+    ${short}
     ${searches}
     ${r.note ? `<p class="hint">${esc(r.note)}</p>` : ""}
     ${items ? `<ol class="qa-list">${items}</ol>` : (r.note ? "" : `<p class="empty">No reported questions were found.</p>`)}
@@ -987,6 +1063,7 @@ async function findSavedQuestions(title, company, button) {
     status.textContent = r.new_count
       ? `${name}: ${r.new_count} new question${r.new_count === 1 ? "" : "s"} found. They're marked new below.`
       : `${name}: ${r.note || "0 new questions found."}`;
+    if (r.below_minimum && r.new_count) status.textContent += ` ${r.below_minimum}`;
     resumeState.newIds = new Set(r.questions.filter((q) => q.new).map((q) => q.question));
     await loadSavedQuestions();
   } catch (err) {
@@ -1003,7 +1080,11 @@ function savedGroupHtml(entry, open) {
   const questions = entry.questions.map((q) => ({ ...q, new: newOnes.has(q.question) }));
   const name = entry.company ? `${esc(entry.company)} · ${esc(entry.title)}` : esc(entry.title);
   const search = `<button type="button" class="btn small" data-saved-search data-title="${esc(entry.title)}"
-    data-company="${esc(entry.company || "")}">Search for new questions</button>`;
+    data-company="${esc(entry.company || "")}">Search for new questions</button>
+    <button type="button" class="btn small" data-practise data-title="${esc(entry.title)}"
+    data-company="${esc(entry.company || "")}">Practise</button>
+    <button type="button" class="btn small" data-sessions data-title="${esc(entry.title)}"
+    data-company="${esc(entry.company || "")}">Old Practise Sessions</button>`;
   const when = new Date(entry.saved_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   return `<details class="saved-qa"${open ? " open" : ""}><summary><b>${name}</b>
       <span class="hint">· ${entry.questions.length} questions · ${entry.searches} search${entry.searches === 1 ? "" : "es"} · last ${esc(when)}</span></summary>

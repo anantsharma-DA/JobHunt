@@ -1,4 +1,4 @@
-"""The "Update Applicants (Naukri)" button: reads applicant counts for many Naukri jobs in the background."""
+"""The "Update Applicants" button: reads applicant counts for many Naukri jobs in the background."""
 import copy
 import threading
 from datetime import datetime, timedelta

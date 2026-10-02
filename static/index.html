@@ -6,22 +6,51 @@
 <meta name="color-scheme" content="light">
 <meta name="referrer" content="no-referrer">
 <title>JobHunt</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔎</text></svg>">
+<link rel="icon" href="/static/logo-mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">Job<span>Hunt</span></div>
-  <nav class="tabs">
-    <button class="tab active" data-tab="jobs" data-view="new">Jobs <span class="count" data-count="new"></span></button>
-    <button class="tab" data-tab="jobs" data-view="saved">Saved Jobs <span class="count" data-count="saved"></span></button>
-    <button class="tab" data-tab="jobs" data-view="applied">Applied <span class="count" data-count="applied"></span></button>
-    <button class="tab" data-tab="jobs" data-view="hidden">Hidden <span class="count" data-count="hidden"></span></button>
-    <button class="tab" data-tab="resume">Resume</button>
-    <button class="tab" data-tab="companies">Companies</button>
-    <button class="tab" data-tab="interview">Interview Questions</button>
-    <button class="tab" data-tab="saved-questions">Saved Questions</button>
-    <button class="tab" data-tab="settings">Settings</button>
+<!-- The JobHunt mark: rings, a magnifier and the orange compass needle. Its colours follow light and dark mode. -->
+<svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="jh-mark" viewBox="0 0 64 64">
+    <path class="logo-navy" stroke-width="5" stroke-linecap="round" d="M54.5 19A26 26 0 1 1 44.2 9"></path>
+    <path class="logo-navy" stroke-width="2.4" stroke-linecap="round" d="M14.7 42A20 20 0 0 1 25.2 13.2"></path>
+    <path class="logo-navy" stroke-width="2.4" stroke-linecap="round" d="M51.7 35.5A20 20 0 0 1 38.8 50.8"></path>
+    <circle class="logo-navy" cx="32" cy="32" r="12.5" stroke-width="4.2"></circle>
+    <path class="logo-navy" stroke-width="5.5" stroke-linecap="round" d="M41.2 41.2L48.5 48.5"></path>
+    <polygon class="logo-orange" points="13.6,50.4 29,29 46.1,17.9"></polygon>
+    <polygon class="logo-orange-dark" points="13.6,50.4 35,35 46.1,17.9"></polygon>
+    <polygon class="logo-orange" points="53.2,10.8 41.9,13.7 46.1,17.9"></polygon>
+    <polygon class="logo-orange-dark" points="53.2,10.8 50.3,22.1 46.1,17.9"></polygon>
+    <circle class="logo-dot" cx="32" cy="32" r="2.4"></circle>
+  </symbol>
+</svg>
+
+<!-- Narrow windows: a slim bar with the menu button; the sidebar slides in over the page. -->
+<div class="mobile-bar">
+  <button type="button" id="menu-btn" class="btn small" aria-controls="sidebar" aria-expanded="false">
+    <svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"></path></svg>Menu</button>
+  <span class="brand"><svg class="brand-mark" aria-hidden="true"><use href="#jh-mark"></use></svg><span class="brand-name">JOBHUNT</span></span>
+</div>
+<div class="nav-scrim" id="nav-scrim"></div>
+
+<header class="topbar" id="sidebar">
+  <span class="brand"><svg class="brand-mark" role="img" aria-label="JobHunt logo"><use href="#jh-mark"></use></svg><span class="brand-name">JOBHUNT</span></span>
+  <nav class="tabs" aria-label="Pages">
+    <div class="nav-group">Find</div>
+    <button class="tab active" data-tab="jobs" data-view="new"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="5" width="12" height="9" rx="1.5"></rect><path d="M6 5V3.5h4V5M2 9h12"></path></svg><span class="tab-label">Jobs</span> <span class="count" data-count="new"></span></button>
+    <button class="tab" data-tab="jobs" data-view="saved"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h8v11l-4-3-4 3z"></path></svg><span class="tab-label">Saved Jobs</span> <span class="count" data-count="saved"></span></button>
+    <button class="tab" data-tab="jobs" data-view="applied"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M5.5 8.2l1.8 1.8 3.2-3.6"></path></svg><span class="tab-label">Applied</span> <span class="count" data-count="applied"></span><span class="count due" id="due-count" title="Reminders due"></span></button>
+    <button class="tab" data-tab="jobs" data-view="hidden"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"></path><path d="M3 13L13 3"></path></svg><span class="tab-label">Hidden</span> <span class="count" data-count="hidden"></span></button>
+    <div class="nav-group">Prepare</div>
+    <button class="tab" data-tab="resume"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.8h5.5L12.5 5v9.2H4z"></path><path d="M9.5 1.8V5h3M6 8.5h4.5M6 11h4.5"></path></svg><span class="tab-label">Resume</span></button>
+    <button class="tab" data-tab="interview"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3h11v8H8l-3 2.5V11H2.5z"></path><path d="M6.6 5.8a1.5 1.5 0 1 1 1.9 1.4c-.4.1-.5.4-.5.8M8 9.3v.1"></path></svg><span class="tab-label">Interview Questions</span></button>
+    <button class="tab" data-tab="saved-questions"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M3 8h10M3 11.5h6"></path></svg><span class="tab-label">Saved Questions</span></button>
+    <div class="nav-group">Research</div>
+    <button class="tab" data-tab="companies"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="10" height="12" rx="1"></rect><path d="M6 5h1M9 5h1M6 8h1M9 8h1M7 14v-3h2v3"></path></svg><span class="tab-label">Companies</span></button>
+    <button class="tab" data-tab="insights"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5V8M8 13.5V3M13 13.5v-4M2 13.5h12"></path></svg><span class="tab-label">Insights</span></button>
+    <div class="nav-group">App</div>
+    <button class="tab" data-tab="settings"><svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"></path></svg><span class="tab-label">Settings</span></button>
   </nav>
   <button type="button" id="theme-toggle" class="btn small theme-toggle" aria-pressed="false">Dark mode</button>
 </header>
@@ -29,6 +58,7 @@
 <main>
   <!-- JOBS / SAVED / APPLIED / HIDDEN -->
   <section id="tab-jobs" class="tab-panel">
+    <header class="page-head"><h1 class="page-title" id="jobs-title">Jobs</h1></header>
     <form id="search-form" class="search-panel">
       <div class="field grow f-titles">
         <span>Job titles</span>
@@ -47,21 +77,23 @@
       <div class="field f-cities">
         <span>Cities <small class="inline">none picked = all of India</small></span>
         <div id="cities-picker"></div>
-        <small id="city-note" class="city-note"></small>
       </div>
+      <small id="city-note" class="city-note"></small>
+      <fieldset class="field f-sources">
+        <span>Search on</span>
+        <div class="check-row">
+          <label><input type="checkbox" name="source" value="linkedin"> LinkedIn</label>
+          <label><input type="checkbox" name="source" value="indeed"> Indeed</label>
+          <label><input type="checkbox" name="source" value="naukri"> Naukri</label>
+          <label><input type="checkbox" name="source" value="companies"> Company sites</label>
+        </div>
+      </fieldset>
       <div class="search-actions">
-        <fieldset class="field">
-          <span>Search on</span>
-          <div class="check-row">
-            <label><input type="checkbox" name="source" value="linkedin"> LinkedIn</label>
-            <label><input type="checkbox" name="source" value="indeed"> Indeed</label>
-            <label><input type="checkbox" name="source" value="naukri"> Naukri</label>
-            <label><input type="checkbox" name="source" value="companies"> Company sites</label>
-          </div>
-        </fieldset>
+        <span class="tip-wrap">
+          <button type="button" id="applicants-btn" class="btn big" aria-describedby="applicants-tip">Update Applicants</button>
+          <span class="tip" id="applicants-tip" role="tooltip">Indeed &amp; Company Sites not Included.</span>
+        </span>
         <button type="submit" id="search-btn" class="btn primary big">Search</button>
-        <button type="button" id="applicants-btn" class="btn big"
-                title="Opens each Naukri job in the Jobs and Saved tabs and reads how many people applied. Counts checked in the last day are skipped.">Update Applicants (Naukri)</button>
       </div>
     </form>
     <div id="progress" class="progress" hidden></div>
@@ -165,6 +197,16 @@
           </div>
         </div>
 
+        <div class="filter">
+          <span>Warnings</span>
+          <div class="checks" id="f-warn">
+            <label><input type="checkbox" value="scam"> Hide likely scams</label>
+            <label><input type="checkbox" value="ghost"> Hide possible ghost jobs</label>
+            <label><input type="checkbox" value="notice"> Only jobs that fit my notice period</label>
+          </div>
+          <small class="filter-note" id="f-notice-note"></small>
+        </div>
+
         <label class="filter">
           <span>Only these companies</span>
           <input id="f-company-include" placeholder="e.g. Deloitte, Amazon">
@@ -196,6 +238,7 @@
 
   <!-- COMPANIES -->
   <section id="tab-companies" class="tab-panel" hidden>
+    <header class="page-head"><h1 class="page-title">Companies</h1></header>
     <div class="panel">
       <h2>Company careers sites</h2>
       <p class="hint">
@@ -210,13 +253,15 @@
       <form id="company-form" class="company-form">
         <input id="company-name" placeholder="Company name" required>
         <input id="company-url" placeholder="Careers page link (optional)">
+        <input id="company-roles" placeholder="Roles, e.g. Data Analyst (optional)">
         <button type="submit" class="btn primary">Add company</button>
       </form>
       <div class="import-box">
         <div>
           <b>Add many companies at once</b>
           <p class="hint">
-            Upload a CSV or Excel (.xlsx) file with two columns: <b>Company name</b> and <b>Careers link</b> (the link can be empty).
+            Upload a CSV or Excel (.xlsx) file with the columns <b>Company name</b> and <b>Careers link</b> (the link can be
+            empty), and optionally <b>Role</b> (for example <i>Data Analyst; Business Analyst</i>) to filter by later.
             Companies already in your list are skipped. <a href="/api/companies/template.csv" download>Download a template</a>
           </p>
         </div>
@@ -226,9 +271,18 @@
         </div>
         <div id="import-result" class="import-result" hidden></div>
       </div>
+      <div class="company-filters" id="company-filters">
+        <div class="field"><span>Company</span><div id="cf-name"></div></div>
+        <div class="field"><span>Read via</span><div id="cf-via"></div></div>
+        <div class="field"><span>Role</span><div id="cf-role"></div></div>
+        <div class="field"><span>In search</span><div id="cf-search"></div></div>
+      </div>
+      <p class="hint company-count" id="company-count"></p>
       <div class="table-wrap">
         <table class="companies">
-          <thead><tr><th>Company</th><th>Read via</th><th>Careers link</th><th>In search</th><th>Test</th><th></th></tr></thead>
+          <thead><tr><th>Company</th><th>Role</th><th>Read via</th><th>Careers link</th>
+            <th><label class="all-check" title="Ticks or unticks every company shown (only the filtered ones while a filter is on)">
+              <input type="checkbox" id="company-all"> In search · All</label></th><th>Test</th><th></th></tr></thead>
           <tbody id="company-rows"></tbody>
         </table>
       </div>
@@ -238,6 +292,7 @@
 
   <!-- RESUME -->
   <section id="tab-resume" class="tab-panel" hidden>
+    <header class="page-head"><h1 class="page-title">Resume</h1></header>
     <div class="panel">
       <h2>Tailored resumes</h2>
       <p class="hint">
@@ -284,8 +339,8 @@
 
   <!-- INTERVIEW QUESTIONS -->
   <section id="tab-interview" class="tab-panel" hidden>
+    <header class="page-head"><h1 class="page-title">Interview questions</h1></header>
     <div class="panel">
-      <h2>Interview questions</h2>
       <p class="hint">
         Pick one or more job titles. JobHunt searches the web for questions real candidates reported being asked for
         that role, and shows where each one was found. Questions reported on 2 or more different sites are marked
@@ -306,8 +361,8 @@
 
   <!-- SAVED QUESTIONS -->
   <section id="tab-saved-questions" class="tab-panel" hidden>
+    <header class="page-head"><h1 class="page-title">Saved questions</h1></header>
     <div class="panel">
-      <h2>Saved questions</h2>
       <p class="hint">Every interview question JobHunt has found for you, kept across all your searches.</p>
       <div class="segmented" role="tablist" aria-label="Which saved questions">
         <button type="button" class="seg active" role="tab" aria-selected="true" data-saved-view="titles">
@@ -338,10 +393,59 @@
     </div>
   </section>
 
+  <!-- INSIGHTS -->
+  <section id="tab-insights" class="tab-panel" hidden>
+    <header class="page-head"><h1 class="page-title">Insights</h1></header>
+    <div class="panel">
+      <p class="hint">Worked out on your computer from your own jobs, applications and resume details.</p>
+      <div class="segmented" role="tablist" aria-label="Which insights">
+        <button type="button" class="seg active" role="tab" aria-selected="true" data-insight-view="applications">Your applications</button>
+        <button type="button" class="seg" role="tab" aria-selected="false" data-insight-view="salary">Salary</button>
+        <button type="button" class="seg" role="tab" aria-selected="false" data-insight-view="skills">Skill gaps</button>
+      </div>
+
+      <div id="insight-applications" class="insight-view" role="tabpanel"></div>
+
+      <div id="insight-salary" class="insight-view" role="tabpanel" hidden>
+        <h3 class="insight-head">What jobs like yours pay</h3>
+        <p class="hint">From the jobs JobHunt has found that show their pay (the middle of each range, in lakhs a year).
+          Most adverts don't show pay, so treat this as a guide.</p>
+        <div class="saved-filter">
+          <label for="sal-title">Job title</label><select id="sal-title"></select>
+          <label for="sal-city">City</label><select id="sal-city"></select>
+          <label for="sal-exp">Experience</label><select id="sal-exp"></select>
+        </div>
+        <div id="sal-result"></div>
+
+        <h3 class="insight-head">CTC to monthly in-hand pay</h3>
+        <p class="hint">New tax regime, FY 2026-27: ₹75,000 standard deduction, no tax up to ₹12 lakh of taxable income
+          (section 87A rebate, with marginal relief just above), then the new-regime slabs, surcharge above ₹50 lakh
+          and 4% cess. Match the options to your offer letter.</p>
+        <form id="hand-form" class="hand-form">
+          <label class="field"><span>CTC (lakhs a year)</span><input type="number" id="h-ctc" min="0" step="any" placeholder="e.g. 9, or 900000 in rupees"></label>
+          <label class="field"><span>Variable pay (% of CTC)</span><input type="number" id="h-variable" min="0" max="60" step="1" value="0"></label>
+          <label class="field"><span>Basic pay (% of fixed pay)</span><input type="number" id="h-basic" min="20" max="80" step="1" value="50"></label>
+          <label class="field"><span>Your PF</span>
+            <select id="h-pf"><option value="full">12% of full basic</option><option value="capped">Capped at ₹1,800 a month</option></select></label>
+          <label class="field"><span>State (professional tax)</span><select id="h-state"></select></label>
+          <label class="field"><span>Professional tax (₹ a year)</span><input type="number" id="h-pt" min="0" max="2500" step="1" value="0">
+            <small>Varies with pay; check your payslip.</small></label>
+          <label class="check-line"><input type="checkbox" id="h-epf" checked> Employer PF is inside the CTC</label>
+          <label class="check-line"><input type="checkbox" id="h-gratuity" checked> Gratuity (4.81% of basic) is inside the CTC</label>
+        </form>
+        <div id="hand-result" aria-live="polite"></div>
+      </div>
+
+      <div id="insight-skills" class="insight-view" role="tabpanel" hidden></div>
+    </div>
+  </section>
+
   <!-- SETTINGS -->
   <section id="tab-settings" class="tab-panel" hidden>
+   <header class="page-head"><h1 class="page-title">Settings</h1></header>
+   <div class="settings-layout">
     <div class="panel narrow">
-      <h2>Settings</h2>
+      <h2>Job search</h2>
       <form id="settings-form">
         <label class="field">
           <span>Results to fetch per job title, per site</span>
@@ -365,12 +469,76 @@
         <span id="settings-saved" class="saved-note" hidden>Saved</span>
       </form>
 
+      <h2>Warnings</h2>
+      <p class="hint">
+        Signs shown on job cards, worked out on this computer (no AI, no cost). They are signs, not proof: each badge
+        lists its reasons. A <b>scam</b> warning looks for fees or deposits, WhatsApp/Telegram-only or Gmail recruiters,
+        "no interview" offers, easy-money tasks and pay far above the experience asked. A <b>possible ghost job</b> has
+        stayed up for a long time or keeps being reposted, often without real hiring behind it.
+      </p>
+      <form id="warnings-form" class="ai-form">
+        <label class="check-line"><input type="checkbox" id="w-scam"> Show scam warnings</label>
+        <label class="check-line"><input type="checkbox" id="w-ghost"> Show possible ghost jobs</label>
+        <label class="field">
+          <span>A job open this many days is a possible ghost job</span>
+          <input type="number" id="w-days" min="14" max="365" step="1">
+          <small>Counted from the first time any search saw it, or its first posting date.</small>
+        </label>
+        <label class="field">
+          <span>...or reposted this many times</span>
+          <input type="number" id="w-reposts" min="1" max="20" step="1">
+          <small>A repost is the same role at the same company coming back with a posting date a week or more later.</small>
+        </label>
+        <div class="import-actions">
+          <button type="submit" class="btn primary">Save warnings</button>
+          <span id="warnings-saved" class="saved-note" hidden>Saved</span>
+        </div>
+      </form>
+
+      <h2>Reminders and daily auto-search</h2>
+      <p class="hint">
+        The <b>Applied</b> tab reminds you to follow up and warns you before interviews. With the daily auto-search on,
+        JobHunt searches your saved job titles, cities and sites for jobs posted in the last day at the time you choose,
+        then tells you how many are new and how many are strong matches. Notifications appear in the corner of your
+        screen (Windows notifications) while JobHunt is running.
+      </p>
+      <form id="auto-form" class="ai-form">
+        <label class="field">
+          <span>Remind me to follow up after (days)</span>
+          <input type="number" id="a-followup" min="1" max="60" step="1">
+          <small>After you apply, and again after you follow up.</small>
+        </label>
+        <label class="check-line"><input type="checkbox" id="a-notify"> Show Windows notifications</label>
+        <label class="check-line"><input type="checkbox" id="a-on"> Daily auto-search</label>
+        <div class="auto-row">
+          <label class="field"><span>At</span><input type="time" id="a-time"></label>
+          <label class="field"><span>Strong match from (%)</span><input type="number" id="a-match" min="0" max="100" step="5"></label>
+        </div>
+        <div class="checks days" id="a-days">
+          <label><input type="checkbox" value="mon"> Mon</label><label><input type="checkbox" value="tue"> Tue</label>
+          <label><input type="checkbox" value="wed"> Wed</label><label><input type="checkbox" value="thu"> Thu</label>
+          <label><input type="checkbox" value="fri"> Fri</label><label><input type="checkbox" value="sat"> Sat</label>
+          <label><input type="checkbox" value="sun"> Sun</label>
+        </div>
+        <label class="check-line"><input type="checkbox" id="a-windows"> Start JobHunt automatically at this time (Windows Task Scheduler)</label>
+        <small class="hint">If JobHunt isn't open then, Windows starts it in a minimised window; it searches, shows the
+          notification, then closes. Only for your Windows user; no administrator rights. Untick to remove it.</small>
+        <p id="auto-last" class="hint"></p>
+        <div class="import-actions">
+          <button type="submit" class="btn primary">Save</button>
+          <button type="button" id="auto-now" class="btn">Run the daily search now</button>
+          <span id="auto-saved" class="saved-note" hidden>Saved</span>
+        </div>
+        <p id="auto-note" class="hint"></p>
+      </form>
+
       <h2>AI for resume tailoring</h2>
       <p class="hint">
-        Only needed for <b>Tailor resume</b> and cover notes; searching for jobs works without it. Add a key for as
-        many services as you like: they are tried from the top down, so if the first is busy, out of credit or down,
-        the next one takes over. Use the arrows to change the order. Each key is kept on this computer and is sent
-        only to its own service.
+        Needed only for the AI features: <b>Tailor resume</b>, cover notes, referral messages, practice feedback,
+        drafted interview answers, <b>Check with AI</b> and reading an uploaded resume. Searching for jobs works without
+        it. OpenRouter, NVIDIA and Gemini have free options. Add a key for as many services as you like: they are tried
+        from the top down, so if the first is busy, out of credit or down, the next one takes over. Use the arrows to
+        change the order. Each key is kept on this computer and is sent only to its own service.
       </p>
       <form id="ai-form" class="ai-form">
         <div id="ai-chain" class="ai-chain"></div>
@@ -403,6 +571,15 @@
           <span>Rounds before stopping at the best version</span>
           <input type="number" id="t-rounds" min="1" max="10" step="1">
         </label>
+        <label class="field">
+          <span>Default resume design</span>
+          <select id="t-design">
+            <option value="modern">Modern (navy accent)</option>
+            <option value="classic">Classic (black, serif)</option>
+            <option value="compact">Compact (bold, fits more)</option>
+          </select>
+          <small>All three are one column and ATS-safe. You can pick a different one for each job next to Make PDF.</small>
+        </label>
         <div class="import-actions">
           <button type="submit" class="btn primary">Save targets</button>
           <span id="targets-saved" class="saved-note" hidden>Saved</span>
@@ -430,21 +607,120 @@
           <span id="search-saved" class="saved-note" hidden>Saved</span>
         </div>
       </form>
+      <form id="minimum-form" class="ai-form">
+        <p class="hint">
+          <b>Minimum questions per search.</b> When a search finds fewer new questions than this, JobHunt tells you
+          ("Only found 6 questions for this job"). It doesn't search again by itself, so no extra credits are used.
+          0 turns the message off.
+        </p>
+        <label class="field">
+          <span>Frequently Asked Questions (on a job)</span>
+          <input type="number" id="min-faq" min="0" max="30" step="1">
+          <small>Company-specific questions are rarer online, so searches often find fewer.</small>
+        </label>
+        <label class="field">
+          <span>Interview Questions tab (job titles)</span>
+          <input type="number" id="min-iq" min="0" max="30" step="1">
+          <small>One search finds at most 30 new questions.</small>
+        </label>
+        <div class="import-actions">
+          <button type="submit" class="btn primary">Save minimums</button>
+          <span id="minimum-saved" class="saved-note" hidden>Saved</span>
+        </div>
+      </form>
 
-      <h2>Stored results</h2>
-      <p class="hint">Removes every job in the <b>Jobs</b> tab. Saved, applied and hidden jobs stay. Useful before searching for a different profile.</p>
-      <button type="button" id="clear-btn" class="btn danger">Clear the Jobs tab</button>
-      <span id="clear-note" class="saved-note" hidden></span>
-
-      <h2>Good to know</h2>
-      <ul class="hint list">
-        <li>Naukri blocks automated requests, so Naukri searches run in a Microsoft Edge window placed off-screen. You may see Edge in the taskbar during a search; don't close it.</li>
-        <li>LinkedIn limits how many searches it allows. If it shows "blocked", wait 30–60 minutes and search again.</li>
-        <li>Job sites change their pages from time to time. If a source stops working, update JobSpy: <code>.venv\Scripts\python -m pip install -U --no-deps python-jobspy</code></li>
-        <li>Companies with their own custom careers sites are only covered as far as they post jobs on Indeed or LinkedIn. For a long company list, choose "Indeed only" above so LinkedIn doesn't block your main search.</li>
-        <li>The app runs only while the <code>run.bat</code> window is open.</li>
-      </ul>
+      <h2>Clear data</h2>
+      <p class="hint">Tick what to delete, page by page, then press <b>Clear data</b>. You'll see what will go before
+        anything is deleted. It can't be undone: to keep a copy, copy the <code>data</code> folder first.</p>
+      <div id="clear-list" class="clear-list">
+        <fieldset class="clear-group"><legend>Jobs</legend>
+          <label class="check-line"><input type="checkbox" name="clear" value="new"> Jobs <span class="clear-count" data-clear-count="new"></span></label>
+          <label class="check-line sub"><input type="checkbox" name="clear" value="history"> Repost history (for possible ghost job warnings)
+            <span class="clear-count" data-clear-count="history"></span></label>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Saved Jobs</legend>
+          <label class="check-line"><input type="checkbox" name="clear" value="saved"> Saved jobs <span class="clear-count" data-clear-count="saved"></span></label>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Applied</legend>
+          <label class="check-line"><input type="checkbox" name="clear" value="applied"> Applied jobs and their tracker details
+            <span class="clear-count" data-clear-count="applied"></span></label>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Hidden</legend>
+          <label class="check-line"><input type="checkbox" name="clear" value="hidden"> Hidden jobs <span class="clear-count" data-clear-count="hidden"></span></label>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Resume</legend>
+          <label class="check-line"><input type="checkbox" name="clear" value="resume"> Your resume details <span class="clear-count" data-clear-count="resume"></span></label>
+          <label class="check-line"><input type="checkbox" name="clear" value="tailored"> Tailored resumes and their PDF files
+            <span class="clear-count" data-clear-count="tailored"></span></label>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Companies</legend>
+          <label class="check-line"><input type="checkbox" name="clear" value="companies"> Company careers sites <span class="clear-count" data-clear-count="companies"></span></label>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Interview Questions</legend>
+          <p class="clear-none">Nothing is stored here: questions found on this tab are kept under
+            <b>Saved Questions → Profile Wise Saved Questions</b>.</p>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Saved Questions</legend>
+          <label class="check-line"><input type="checkbox" name="clear" value="qa_titles"> Profile Wise Saved Questions
+            <span class="clear-count" data-clear-count="qa_titles"></span></label>
+          <label class="check-line"><input type="checkbox" name="clear" value="qa_companies"> Saved Frequently Asked Questions
+            <span class="clear-count" data-clear-count="qa_companies"></span></label>
+          <label class="check-line"><input type="checkbox" name="clear" value="practice"> Practice history (your typed answers and scores)
+            <span class="clear-count" data-clear-count="practice"></span></label>
+        </fieldset>
+        <fieldset class="clear-group"><legend>Insights</legend>
+          <p class="clear-none">Nothing is stored here: Your applications, Salary and Skill gaps are worked out from the
+            pages above, so they change when those are cleared.</p>
+        </fieldset>
+      </div>
+      <p class="hint">Clearing Jobs, Saved Jobs, Applied or Hidden also deletes what belongs to those jobs: tracker
+        details (stages, dates, notes, recruiter contacts), referral messages, and tailored resumes with their PDFs.</p>
+      <div class="import-actions">
+        <button type="button" id="clear-btn" class="btn danger">Clear data</button>
+        <span id="clear-note" class="saved-note" hidden></span>
+      </div>
     </div>
+
+    <aside class="panel good-to-know" aria-labelledby="gtk-title">
+      <h2 id="gtk-title">Good to know</h2>
+      <h3>Searching</h3>
+      <ul class="hint list">
+        <li>Naukri blocks automated requests, so Naukri searches and <b>Update Applicants</b> use a Microsoft Edge
+          window placed off-screen. You may see Edge in the taskbar; don't close it.</li>
+        <li>LinkedIn limits how many searches it allows. If it shows "blocked", wait 30–60 minutes and search again.</li>
+        <li>Companies with their own careers site (not Greenhouse, Lever, Ashby, SmartRecruiters or Workday) are covered
+          only through Indeed or LinkedIn. For a long list, choose "Indeed only" above.</li>
+        <li>If a site stops working, update the site reader:
+          <code>.venv\Scripts\python -m pip install -U --no-deps python-jobspy</code></li>
+      </ul>
+      <h3>Warnings and Insights</h3>
+      <ul class="hint list">
+        <li>Scam and possible ghost job badges are signs, not proof. <b>Check with AI</b> in Details gives a second opinion.</li>
+        <li>Salary ranges come only from jobs that show pay, and the in-hand pay is an estimate (new tax regime, FY 2026-27).
+          Check the offer letter and payslip.</li>
+      </ul>
+      <h3>AI and keys</h3>
+      <ul class="hint list">
+        <li>Searching needs no key. The AI features (tailoring, cover notes, referral messages, practice feedback,
+          drafted answers) need one AI key; free ones work. Interview questions need a Tavily key or a Gemini key.</li>
+        <li>Everything the AI writes is checked against your Resume tab; flagged words aren't in your details.</li>
+        <li>Keys are encrypted for your Windows account. After moving JobHunt to another computer, paste them again.</li>
+        <li>Tavily gives 1,000 free credits a month; opening saved questions costs nothing.</li>
+      </ul>
+      <h3>Running</h3>
+      <ul class="hint list">
+        <li>JobHunt, its reminders and the daily auto-search run only while the <code>run.bat</code> window is open,
+          unless <b>Start JobHunt automatically</b> is ticked above.</li>
+        <li>Windows notifications appear under "Windows PowerShell".</li>
+      </ul>
+      <h3>Your data</h3>
+      <ul class="hint list">
+        <li>Everything is kept in the <code>data</code> folder inside JobHunt (tailored PDFs in <code>data\resumes</code>),
+          never uploaded.</li>
+        <li>To update or move JobHunt, copy the <code>data</code> folder into the new copy.</li>
+      </ul>
+    </aside>
+   </div>
   </section>
 </main>
 
@@ -472,6 +748,13 @@
       <span id="tailor-status" class="tailor-status"></span>
       <button type="button" id="tailor-stop" class="btn danger" hidden>Stop</button>
       <button type="button" id="tailor-again" class="btn" hidden>Tailor again</button>
+      <label class="design-pick" id="tailor-design-box" hidden>Design
+        <select id="tailor-design" title="The look of the PDF; all three are ATS-safe">
+          <option value="modern">Modern</option>
+          <option value="classic">Classic</option>
+          <option value="compact">Compact</option>
+        </select>
+      </label>
       <button type="button" id="tailor-pdf" class="btn primary" hidden>Make PDF</button>
       <button type="button" id="tailor-anyway" class="btn danger" hidden>Use flagged wording anyway</button>
     </div>
@@ -488,8 +771,69 @@
     <div id="qa-body" class="tailor-body"></div>
     <div class="tailor-actions">
       <span id="qa-status" class="tailor-status"></span>
+      <button type="button" id="qa-practise" class="btn">Practise</button>
       <button type="button" id="qa-refresh" class="btn">Search again</button>
     </div>
+  </div>
+</div>
+
+<div id="track-overlay" class="overlay" hidden>
+  <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="track-title">
+    <div class="tailor-head">
+      <h2 id="track-title">Application</h2>
+      <button type="button" id="track-close" class="link-btn">Close</button>
+    </div>
+    <div id="track-body" class="tailor-body"></div>
+    <div class="tailor-actions">
+      <span id="track-status" class="tailor-status"></span>
+      <button type="button" id="track-save" class="btn primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Referral request and recruiter note for one job -->
+<div id="outreach-overlay" class="overlay" hidden>
+  <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="outreach-title">
+    <div class="tailor-head">
+      <h2 id="outreach-title">Referral and recruiter messages</h2>
+      <button type="button" id="outreach-close" class="link-btn">Close</button>
+    </div>
+    <div id="outreach-body" class="tailor-body"></div>
+    <div class="tailor-actions">
+      <span id="outreach-status" class="tailor-status"></span>
+      <button type="button" id="outreach-write" class="btn primary">Write with AI</button>
+    </div>
+  </div>
+</div>
+
+<!-- Typed mock interview on saved questions -->
+<div id="practice-overlay" class="overlay" hidden>
+  <div class="overlay-card wide" role="dialog" aria-modal="true" aria-labelledby="practice-title">
+    <div class="tailor-head">
+      <h2 id="practice-title">Practice</h2>
+      <button type="button" id="practice-close" class="link-btn">Close</button>
+    </div>
+    <div id="practice-body" class="tailor-body"></div>
+    <div class="tailor-actions">
+      <span id="practice-status" class="tailor-status"></span>
+      <button type="button" id="practice-weak" class="btn">Retry weak ones</button>
+      <button type="button" id="practice-skip" class="btn">Skip</button>
+      <button type="button" id="practice-send" class="btn primary">Get feedback</button>
+      <button type="button" id="practice-save" class="btn primary" hidden>Save &amp; next</button>
+      <button type="button" id="practice-all" class="btn primary" hidden>Get feedback for all</button>
+      <button type="button" id="practice-next" class="btn primary" hidden>Next question</button>
+    </div>
+  </div>
+</div>
+
+<!-- Earlier practice sessions for one set of saved questions -->
+<div id="sessions-overlay" class="overlay" hidden>
+  <div class="overlay-card wide" role="dialog" aria-modal="true" aria-labelledby="sessions-title">
+    <div class="tailor-head">
+      <h2 id="sessions-title">Old Practise Sessions</h2>
+      <button type="button" id="sessions-close" class="link-btn">Close</button>
+    </div>
+    <div id="sessions-body" class="tailor-body"></div>
   </div>
 </div>
 
@@ -500,5 +844,7 @@
 
 <script src="/static/app.js"></script>
 <script src="/static/resume.js"></script>
+<script src="/static/tracker.js"></script>
+<script src="/static/insights.js"></script>
 </body>
 </html>

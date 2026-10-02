@@ -77,7 +77,11 @@ async function api(path, options = {}) {
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data.detail || `Request failed (${resp.status})`);
+  if (!resp.ok) {
+    // status and retryAfter let a caller wait and try again after "Too many requests" (429).
+    throw Object.assign(new Error(data.detail || `Request failed (${resp.status})`),
+                        { status: resp.status, retryAfter: Number(resp.headers.get("retry-after")) || 0 });
+  }
   return data;
 }
 
@@ -303,11 +307,15 @@ function saveProfile() {
 }
 
 /* ---------- Tabs ---------- */
+const VIEW_TITLES = { new: "Jobs", saved: "Saved Jobs", applied: "Applied", hidden: "Hidden" };
+
 function showTab(tab, view = state.view) {
   $$(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab && (tab !== "jobs" || b.dataset.view === view)));
+  setMenu(false); // on a narrow window, choosing a page closes the menu
   $$(".tab-panel").forEach((p) => (p.hidden = p.id !== `tab-${tab}`));
   if (tab === "jobs") {
     state.view = view;
+    $("#jobs-title").textContent = VIEW_TITLES[view];
     $("#search-form").hidden = view !== "new";
     $("#progress").hidden = view !== "new" || !$("#progress").innerHTML;
     $("#applicants-progress").hidden = !["new", "saved"].includes(view) || !$("#applicants-progress").innerHTML;
@@ -319,6 +327,14 @@ function showTab(tab, view = state.view) {
 }
 
 $$(".tab").forEach((btn) => btn.addEventListener("click", () => showTab(btn.dataset.tab, btn.dataset.view)));
+
+/* Narrow windows: the sidebar is a menu that slides in. */
+function setMenu(open) {
+  document.body.classList.toggle("menu-open", open);
+  $("#menu-btn").setAttribute("aria-expanded", String(open));
+}
+$("#menu-btn").addEventListener("click", () => setMenu(!document.body.classList.contains("menu-open")));
+$("#nav-scrim").addEventListener("click", () => setMenu(false));
 
 function renderCounts() {
   $$("[data-count]").forEach((el) => {
@@ -385,7 +401,27 @@ async function loadSettings() {
   $("#s-results").value = s.results_wanted;
   $("#s-delay").value = s.request_delay;
   $("#s-company-sites").value = s.company_search_sites;
+  $("#w-scam").checked = s.warn_scam;
+  $("#w-ghost").checked = s.warn_ghost;
+  $("#w-days").value = s.ghost_days;
+  $("#w-reposts").value = s.ghost_reposts;
 }
+
+$("#warnings-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const whole = (sel, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.round(Number($(sel).value) || fallback)));
+  try {
+    await api("/api/settings", { method: "PUT", body: {
+      warn_scam: $("#w-scam").checked, warn_ghost: $("#w-ghost").checked,
+      ghost_days: whole("#w-days", 14, 365, 45), ghost_reposts: whole("#w-reposts", 1, 20, 3) } });
+  } catch (err) {
+    return alert(err.message);
+  }
+  const note = $("#warnings-saved");
+  note.hidden = false;
+  setTimeout(() => (note.hidden = true), 2500);
+  loadJobs(); // the badges follow the new settings
+});
 
 $("#search-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -469,6 +505,7 @@ function renderProgress(status) {
 
 function setLocked(locked) {
   $("header.topbar").inert = locked;
+  $(".mobile-bar").inert = locked;
   $("main").inert = locked;
   document.body.classList.toggle("locked", locked);
 }
@@ -518,6 +555,7 @@ function hideOverlay() {
 async function loadJobs() {
   const data = await api("/api/jobs");
   state.jobs = data.jobs;
+  state.noticeDays = data.your_notice_days; // from your Resume tab answers; null if not filled in
   renderCounts();
   renderTitleOptions();
   renderCityOptions();
@@ -551,7 +589,59 @@ function readFilters() {
     sources: checkedValues("#f-source"),
     include: splitList($("#f-company-include").value),
     exclude: splitList($("#f-company-exclude").value),
+    warn: checkedValues("#f-warn"),
   };
+}
+
+/* ---------- Warnings: scams, ghost jobs, notice period, applying twice ---------- */
+
+// A job counts as a likely scam when the rules say high, or the AI (if you asked it) says high.
+function likelyScam(job) {
+  return (job.scam_ai && job.scam_ai.risk === "high") || (!job.scam_ai && job.scam && job.scam.level === "high");
+}
+
+function fitsNotice(job) {
+  if (state.noticeDays == null || !job.notice) return true; // unknown either way: keep the job
+  return state.noticeDays <= job.notice.max_days;
+}
+
+function shortDate(iso) {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "date unknown";
+}
+
+function warningBadges(job) {
+  const out = [];
+  const ai = job.scam_ai;
+  const level = ai ? ai.risk : job.scam && job.scam.level;
+  const reasons = ai ? ai.reasons : (job.scam && job.scam.reasons) || [];
+  const why = reasons.length ? ` title="${esc(reasons.join("; "))}"` : "";
+  if (level === "high") out.push(`<span class="warn-badge scam-high"${why}>⚠ Likely scam${ai ? " (AI)" : ""}</span>`);
+  else if (level === "medium") out.push(`<span class="warn-badge scam-mid"${why}>⚠ Check this advert${ai ? " (AI)" : ""}</span>`);
+  if (job.ghost && job.ghost.likely) {
+    out.push(`<span class="warn-badge ghost" title="${esc(job.ghost.reasons.join("; "))}">Possible ghost job</span>`);
+  }
+  if (job.notice) {
+    const clash = state.noticeDays != null && state.noticeDays > job.notice.max_days;
+    out.push(`<span class="warn-badge notice${clash ? " clash" : ""}" title="${clash ? "Longer than your notice period allows" : "What the advert asks"}">${esc(job.notice.text)}</span>`);
+  }
+  if (job.already_applied && job.status !== "applied") {
+    out.push(`<span class="warn-badge applied" title="You applied to this role at this company on another card">Already applied · ${esc(shortDate(job.already_applied.on))}</span>`);
+  }
+  return out.length ? `<div class="warn-row">${out.join("")}</div>` : "";
+}
+
+function warningDetailHtml(job) {
+  const parts = [];
+  if (job.scam && job.scam.reasons.length) parts.push(`<p><b>Scam signs (${esc(job.scam.level)}):</b> ${esc(job.scam.reasons.join("; "))}.</p>`);
+  if (job.scam_ai) {
+    parts.push(`<p><b>AI second opinion: ${esc(job.scam_ai.risk)} risk</b>${job.scam_ai.reasons.length ? ` · ${esc(job.scam_ai.reasons.join("; "))}` : ""}
+      <small>(${esc(job.scam_ai.model || "")}, ${esc(shortDate(job.scam_ai.checked_at))})</small></p>`);
+  }
+  if (job.ghost && job.ghost.likely) parts.push(`<p><b>Possible ghost job:</b> ${esc(job.ghost.reasons.join("; "))}.</p>`);
+  if (job.already_applied) parts.push(`<p><b>Already applied</b> to this role at this company on ${esc(shortDate(job.already_applied.on))}.</p>`);
+  return `<div class="warn-detail">${parts.join("")}
+    <button type="button" class="btn small" data-act="scamcheck">${job.scam_ai ? "Check with AI again" : "Check with AI"}</button>
+    <small class="hint">Sends only this advert to your AI service for a second opinion on whether it is a scam.</small></div>`;
 }
 
 function isoDaysAgo(days) {
@@ -587,6 +677,9 @@ function passes(job, f, cutoff) {
   if (f.include.length && !f.include.some((t) => company.includes(t))) return false;
   if (f.exclude.some((t) => company.includes(t))) return false;
   if (f.text && !`${job.title} ${job.company}`.toLowerCase().includes(f.text)) return false;
+  if (f.warn.has("scam") && likelyScam(job)) return false;
+  if (f.warn.has("ghost") && job.ghost && job.ghost.likely) return false;
+  if (f.warn.has("notice") && !fitsNotice(job)) return false;
   return true;
 }
 
@@ -608,6 +701,8 @@ function applyFilters({ keepPage = false } = {}) {
   $("#f-rating-val").textContent = f.minRating ? `${f.minRating.toFixed(1)}★ and above` : "Any";
   $("#f-city-note").textContent = state.cities.size ? `${state.cities.size} selected` : "all cities";
   $("#f-title-note").textContent = state.titleFilter.size ? `${state.titleFilter.size} selected` : "all titles";
+  $("#f-notice-note").textContent = f.warn.has("notice") && state.noticeDays == null
+    ? "Add your notice period on the Resume tab (Answers) to use this." : "";
   const cutoff = f.days ? isoDaysAgo(f.days) : null;
   state.visible = state.jobs.filter((j) => passes(j, f, cutoff)).sort(SORTERS[$("#sort").value]);
   if (!keepPage) state.shown = PAGE_SIZE;
@@ -624,6 +719,7 @@ function renderJobs() {
     $("#more-btn").hidden = true;
     return;
   }
+  if (state.view === "applied") return renderBoard(state.visible); // tracker.js: the board with a column per stage
   list.innerHTML = state.visible.slice(0, state.shown).map(cardHtml).join("");
   $("#more-btn").hidden = state.visible.length <= state.shown;
 }
@@ -679,15 +775,17 @@ function actionsHtml(job) {
   const prepare = `<button class="btn small" data-act="tailor">Tailor resume</button>`;
   // Also resume.js: interview questions this company asked for this role, found on the web.
   const faq = `<button class="btn small" data-act="faq" title="Interview questions this company asked for this role">Frequently Asked Questions</button>`;
+  // And insights.js: a referral request and a recruiter note, from your saved details.
+  const referral = `<button class="btn small" data-act="outreach" title="Ask for a referral, or write to the recruiter">Referral</button>`;
   switch (job.status) {
     case "saved":
-      return apply + moveButton("new", "Unsave") + moveButton("hidden", "Hide") + prepare + faq + details;
+      return apply + moveButton("new", "Unsave") + moveButton("hidden", "Hide") + prepare + referral + faq + details;
     case "applied":
-      return apply + `<div class="applied-mark">Applied ✓</div>` + moveButton("new", "Not applied") + prepare + faq + details;
+      return apply + `<div class="applied-mark">Applied ✓</div>` + moveButton("new", "Not applied") + prepare + referral + faq + details;
     case "hidden":
       return moveButton("new", "Unhide") + apply + details;
     default:
-      return apply + moveButton("saved", "Save") + moveButton("hidden", "Hide") + prepare + faq + details;
+      return apply + moveButton("saved", "Save") + moveButton("hidden", "Hide") + prepare + referral + faq + details;
   }
 }
 
@@ -718,6 +816,7 @@ function cardHtml(job) {
       </div>
       <div class="company"><b>${esc(job.company)}</b>${ratingBadge(job)} · ${esc(job.location || job.cities.join(", ") || "India")}</div>
       <div class="chips">${salaryChip(job)}${applicantsChip(job)}${mode}${types}${exp}<span class="chip muted">${postedText(job.date_posted)}</span></div>
+      ${warningBadges(job)}
       ${skills}
       <div class="srcs">Found on: ${sources}${job.search_titles.length ? ` · searched for ${job.search_titles.map(esc).join(", ")}` : ""}</div>
       <div class="details" hidden></div>
@@ -763,8 +862,36 @@ $("#job-list").addEventListener("click", async (e) => {
   const job = state.jobs.find((j) => j.id === Number(card.dataset.id));
   const act = target.dataset.act;
   if (act === "apply") {
+    // Applying twice to the same role (often a repost): ask first. Cancelling stops the link from opening.
+    if (job.already_applied && job.status !== "applied"
+        && !confirm(`You applied to ${job.title} at ${job.company} on ${shortDate(job.already_applied.on)}. Apply again?`)) {
+      e.preventDefault();
+      return;
+    }
     // The link itself opens the apply page in a new tab; just record it.
     if (job.status !== "applied") setTimeout(() => setStatus(job, "applied"), 0);
+    return;
+  }
+  if (act === "scamcheck") {
+    target.disabled = true;
+    target.textContent = "Checking…";
+    try {
+      job.scam_ai = await api(`/api/jobs/${job.id}/scam-check`, { method: "POST" });
+      if (readFilters().warn.has("scam") && likelyScam(job)) {
+        applyFilters({ keepPage: true }); // "Hide likely scams" is on: the job leaves the list
+        return;
+      }
+      // Otherwise only this card changes, so its Details stay open.
+      const badges = warningBadges(job);
+      const row = card.querySelector(".warn-row");
+      if (row) row.outerHTML = badges;
+      else card.querySelector(".chips").insertAdjacentHTML("afterend", badges);
+      card.querySelector(".warn-detail").outerHTML = warningDetailHtml(job);
+    } catch (err) {
+      alert(err.message);
+      target.disabled = false;
+      target.textContent = "Check with AI";
+    }
     return;
   }
   if (act === "move") return setStatus(job, target.dataset.to);
@@ -780,9 +907,10 @@ $("#job-list").addEventListener("click", async (e) => {
     box.textContent = "Loading…";
     const detail = await api(`/api/jobs/${job.id}`).catch((err) => ({ description: err.message }));
     const skills = detail.skills_listed ? `Skills listed: ${detail.skills_listed}\n\n` : "";
-    box.textContent = skills + (plainText(detail.description) || "No description was provided by this source. Open the job link for full details.");
+    box.innerHTML = `${warningDetailHtml(job)}<div class="desc"></div>`;
+    box.querySelector(".desc").textContent = skills + (plainText(detail.description) || "No description was provided by this source. Open the job link for full details.");
     // Naukri search results don't include applicant counts, so fetch this job's count now
-    // (unless Update Applicants (Naukri) is already reading them all).
+    // (unless Update Applicants is already reading them all).
     if (!job.applicants_text && job.sources.some((s) => s.site === "naukri") && !state.applicantsRunning) {
       const note = document.createElement("div");
       note.className = "applicant-note";
@@ -856,9 +984,10 @@ const FILTER_CHECK_GROUPS = ["#f-mode", "#f-type", "#f-source"];
 
 FILTER_INPUTS.forEach((sel) => $(sel).addEventListener("input", () => applyFilters()));
 FILTER_CHECK_GROUPS.forEach((sel) => $(sel).addEventListener("change", () => applyFilters()));
+$("#f-warn").addEventListener("change", () => applyFilters());
 
 function saveFilters() {
-  const data = { cities: [...state.cities], titles: [...state.titleFilter] };
+  const data = { cities: [...state.cities], titles: [...state.titleFilter], warn: [...checkedValues("#f-warn")] };
   FILTER_INPUTS.forEach((sel) => (data[sel] = $(sel).value));
   FILTER_CHECK_GROUPS.forEach((sel) => (data[sel] = [...checkedValues(sel)]));
   try {
@@ -879,6 +1008,7 @@ function restoreFilters() {
   });
   state.cities = new Set(data.cities || []);
   state.titleFilter = new Set(data.titles || []);
+  $$("#f-warn input").forEach((cb) => (cb.checked = (data.warn || []).includes(cb.value)));
 }
 
 $("#reset-filters").addEventListener("click", () => {
@@ -892,6 +1022,7 @@ $("#reset-filters").addEventListener("click", () => {
   $("#f-rating").value = 0;
   $("#f-date").value = "0";
   FILTER_CHECK_GROUPS.forEach((sel) => $$(`${sel} input`).forEach((cb) => (cb.checked = true)));
+  $$("#f-warn input").forEach((cb) => (cb.checked = false)); // warning filters are off by default
   state.cities = new Set();
   state.titleFilter = new Set();
   renderTitleOptions();
@@ -900,34 +1031,123 @@ $("#reset-filters").addEventListener("click", () => {
 });
 
 /* ---------- Companies ---------- */
-async function loadCompanies() {
-  const companies = await api("/api/companies");
-  $("#company-empty").hidden = companies.length > 0;
-  $("#company-rows").innerHTML = companies
-    .map(
-      (c) => `
+// Filters work like the Job titles box. Within one filter any picked value matches; across filters all must.
+const companyState = { list: [], pickers: null };
+const IN_SEARCH = ["Ticked", "Not ticked"];
+
+function companyPickers() {
+  if (companyState.pickers) return companyState.pickers;
+  const sorted = (values) => [...new Set(values)].sort((a, b) => a.localeCompare(b));
+  const make = (id, placeholder, group, options) => createPicker($(id), {
+    placeholder, groups: () => [{ name: group, options: options() }], allOptions: options, onChange: renderCompanies });
+  companyState.pickers = {
+    name: make("#cf-name", "All companies", "Companies", () => companyState.list.map((c) => c.name)),
+    via: make("#cf-via", "Any platform", "Read via", () => sorted(companyState.list.map((c) => c.platform_label))),
+    role: make("#cf-role", "Any role", "Roles", () => sorted(companyState.list.flatMap((c) => c.roles))),
+    search: make("#cf-search", "Ticked or not", "In search", () => IN_SEARCH),
+  };
+  return companyState.pickers;
+}
+
+function shownCompanies() {
+  const picked = (key) => companyPickers()[key].values.map((v) => v.toLowerCase());
+  const [names, via, roles, search] = ["name", "via", "role", "search"].map(picked);
+  return companyState.list.filter((c) =>
+    (!names.length || names.some((n) => c.name.toLowerCase().includes(n))) // a typed "bank" matches every bank
+    && (!via.length || via.includes(c.platform_label.toLowerCase()))
+    && (!roles.length || c.roles.some((r) => roles.includes(r.toLowerCase())))
+    && (!search.length || search.includes(c.enabled ? "ticked" : "not ticked")));
+}
+
+function companyRowHtml(c) {
+  const roles = c.roles.map((r) => `<span class="role-chip">${esc(r)}</span>`).join("");
+  return `
     <tr data-id="${c.id}">
       <td><b>${esc(c.name)}</b></td>
+      <td class="roles-cell">${roles}<button class="link-btn" data-act="roles">${c.roles.length ? "Edit" : "Add"}</button></td>
       <td><span class="platform ${c.platform === "boards" ? "boards" : ""}">${esc(c.platform_label)}</span><div class="note">${esc(c.check_note || "")}</div></td>
       <td class="url">${safeUrl(c.careers_url) ? `<a href="${esc(safeUrl(c.careers_url))}" target="_blank" rel="noopener noreferrer">${esc(c.careers_url)}</a>` : "—"}</td>
-      <td><input type="checkbox" data-act="toggle" ${c.enabled ? "checked" : ""}></td>
+      <td><input type="checkbox" data-act="toggle" aria-label="In search: ${esc(c.name)}" ${c.enabled ? "checked" : ""}></td>
       <td><button class="btn small" data-act="test">Test</button><span class="test-result"></span></td>
       <td><button class="link-btn" data-act="remove">Remove</button></td>
-    </tr>`
-    )
-    .join("");
+    </tr>`;
+}
+
+// The count line and the All box, which shows ticked / unticked / some for the companies shown.
+function renderCompanyTotals(shown = shownCompanies()) {
+  const ticked = shown.filter((c) => c.enabled).length;
+  const all = $("#company-all");
+  all.checked = shown.length > 0 && ticked === shown.length;
+  all.indeterminate = ticked > 0 && ticked < shown.length;
+  all.disabled = !shown.length;
+  const inSearch = companyState.list.filter((c) => c.enabled).length;
+  $("#company-count").textContent = companyState.list.length
+    ? `Showing ${shown.length} of ${companyState.list.length} companies · ${inSearch} in search` : "";
+}
+
+function renderCompanies() {
+  const shown = shownCompanies();
+  $("#company-empty").hidden = companyState.list.length > 0;
+  $("#company-filters").hidden = !companyState.list.length;
+  $("#company-rows").innerHTML = shown.length ? shown.map(companyRowHtml).join("")
+    : companyState.list.length ? `<tr><td colspan="7" class="hint">No companies match these filters.</td></tr>` : "";
+  renderCompanyTotals(shown);
+}
+
+async function loadCompanies() {
+  companyState.list = await api("/api/companies");
+  companyPickers();
+  renderCompanies();
 }
 
 $("#company-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
-    await api("/api/companies", { method: "POST", body: { name: $("#company-name").value, careers_url: $("#company-url").value } });
-    $("#company-name").value = "";
-    $("#company-url").value = "";
+    await api("/api/companies", { method: "POST", body: { name: $("#company-name").value, careers_url: $("#company-url").value,
+                                                           roles: splitTerms($("#company-roles").value) } });
+    ["#company-name", "#company-url", "#company-roles"].forEach((sel) => ($(sel).value = ""));
     loadCompanies();
   } catch (err) {
     alert(err.message);
   }
+});
+
+$("#company-all").addEventListener("change", async (e) => {
+  const shown = shownCompanies();
+  const enabled = e.target.checked;
+  try {
+    await api("/api/companies/in-search", { method: "POST", body: { ids: shown.map((c) => c.id), enabled } });
+    shown.forEach((c) => (c.enabled = enabled));
+  } catch (err) {
+    alert(err.message);
+  }
+  renderCompanies();
+});
+
+async function saveRoles(row, input) {
+  const company = companyState.list.find((c) => String(c.id) === row.dataset.id);
+  if (!company || input.dataset.saving) return;
+  input.dataset.saving = "1";
+  const roles = splitTerms(input.value);
+  try {
+    await api(`/api/companies/${company.id}`, { method: "PATCH", body: { roles } });
+    company.roles = roles;
+  } catch (err) {
+    alert(err.message);
+  }
+  renderCompanies();
+}
+
+$("#company-rows").addEventListener("keydown", (e) => {
+  if (!e.target.matches(".roles-input")) return;
+  if (e.key === "Enter") saveRoles(e.target.closest("tr"), e.target);
+  else if (e.key === "Escape") {
+    e.target.dataset.saving = "1"; // cancelled: leaving the box mustn't save it
+    renderCompanies();
+  }
+});
+$("#company-rows").addEventListener("focusout", (e) => {
+  if (e.target.matches(".roles-input")) saveRoles(e.target.closest("tr"), e.target);
 });
 
 $("#company-rows").addEventListener("click", async (e) => {
@@ -936,11 +1156,21 @@ $("#company-rows").addEventListener("click", async (e) => {
   const row = target.closest("tr");
   const id = row.dataset.id;
   const act = target.dataset.act;
+  const company = companyState.list.find((c) => String(c.id) === id);
   if (act === "toggle") {
-    await api(`/api/companies/${id}`, { method: "PATCH", body: { enabled: target.checked } }).catch((err) => {
+    try {
+      await api(`/api/companies/${id}`, { method: "PATCH", body: { enabled: target.checked } });
+      if (company) company.enabled = target.checked;
+      renderCompanyTotals();
+    } catch (err) {
       target.checked = !target.checked; // put the tick back as it was
       alert(err.message);
-    });
+    }
+  } else if (act === "roles") {
+    const cell = row.querySelector(".roles-cell");
+    cell.innerHTML = `<input class="roles-input" maxlength="300" aria-label="Roles, separated by commas"
+      placeholder="Data Analyst, Business Analyst" value="${esc((company?.roles || []).join(", "))}">`;
+    cell.querySelector("input").focus();
   } else if (act === "remove") {
     if (!confirm("Remove this company?")) return;
     await api(`/api/companies/${id}`, { method: "DELETE" }).catch((err) => alert(err.message));
@@ -1029,17 +1259,71 @@ $("#settings-form").addEventListener("submit", async (e) => {
   setTimeout(() => (note.hidden = true), 2000);
 });
 
+/* ---------- Clear data, page by page ---------- */
+const CLEAR_NAMES = {
+  new: "Jobs", history: "Repost history", saved: "Saved Jobs", applied: "Applied", hidden: "Hidden",
+  resume: "Your resume details", tailored: "Tailored resumes and PDFs", companies: "Companies",
+  qa_titles: "Profile Wise Saved Questions", qa_companies: "Saved Frequently Asked Questions", practice: "Practice history",
+};
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+function clearCountText(part, c) {
+  const n = c[part];
+  if (["new", "saved", "applied", "hidden"].includes(part)) return plural(n, "job");
+  if (part === "history") return plural(n, "role");
+  if (part === "resume") return n ? "saved" : "empty";
+  if (part === "tailored") return plural(n, "resume");
+  if (part === "companies") return plural(n, "company").replace("companys", "companies");
+  if (part === "qa_titles") return `${plural(n, "question")} in ${plural(c.qa_title_groups, "job title")}`;
+  if (part === "qa_companies") return `${plural(n, "question")} in ${plural(c.qa_company_groups, "company")}`.replace("companys", "companies");
+  if (part === "practice") return plural(n, "attempt");
+  return String(n);
+}
+
+async function loadDataCounts() {
+  const c = await api("/api/data").catch(() => null);
+  if (!c) return;
+  state.dataCounts = c;
+  $$("input[name=clear]").forEach((cb) => {
+    const empty = !c[cb.value];
+    cb.disabled = empty; // nothing to clear
+    if (empty) cb.checked = false;
+    $(`[data-clear-count="${cb.value}"]`).textContent = `(${clearCountText(cb.value, c)})`;
+  });
+}
+
+$$(".tab[data-tab=settings]").forEach((tab) => tab.addEventListener("click", loadDataCounts));
+
 $("#clear-btn").addEventListener("click", async () => {
-  if (!confirm("Remove every job in the Jobs tab? Saved, applied and hidden jobs stay.")) return;
+  const parts = $$("input[name=clear]:checked").map((cb) => cb.value);
+  if (!parts.length) return alert("Tick what you want to clear first.");
+  const c = state.dataCounts || {};
+  const lines = parts.map((p) => `• ${CLEAR_NAMES[p]}: ${clearCountText(p, c)}`);
+  const attached = parts.some((p) => ["new", "saved", "applied", "hidden"].includes(p))
+    ? "\n\nTheir tracker details, referral messages and tailored resumes (with PDFs) are deleted too." : "";
+  if (!confirm(`Delete this data?\n\n${lines.join("\n")}${attached}\n\nThis can't be undone.`)) return;
+  const note = $("#clear-note");
   let r;
   try {
-    r = await api("/api/jobs/clear", { method: "POST" });
+    r = await api("/api/data/clear", { method: "POST", body: { parts } });
   } catch (err) {
     return alert(err.message);
   }
-  $("#clear-note").hidden = false;
-  $("#clear-note").textContent = `Removed ${r.deleted} jobs`;
+  note.hidden = false;
+  note.textContent = `Cleared: ${parts.map((p) => CLEAR_NAMES[p]).join(", ")}`;
+  $$("input[name=clear]").forEach((cb) => (cb.checked = false));
+  await loadDataCounts();
+  // Every page shows what's left.
   loadJobs();
+  if (typeof loadApplications === "function") loadApplications();
+  if (typeof loadSavedQuestions === "function") loadSavedQuestions();
+  if (typeof loadTailoredList === "function") loadTailoredList();
+  if (parts.includes("resume") && typeof resumeState !== "undefined") resumeState.profile = null;
+  if (parts.includes("companies")) loadCompanies();
+  return r;
 });
 
 /* ---------- Start ---------- */
@@ -1068,8 +1352,8 @@ $("#theme-toggle").addEventListener("click", async () => {
   }
 });
 
-/* ---------- Update Applicants (Naukri) ---------- */
-const APPLICANTS_LABEL = "Update Applicants (Naukri)";
+/* ---------- Update Applicants (Naukri jobs) ---------- */
+const APPLICANTS_LABEL = "Update Applicants"; // Naukri jobs only (its floating note says so)
 
 $("#applicants-btn").addEventListener("click", async () => {
   $("#applicants-btn").disabled = true;

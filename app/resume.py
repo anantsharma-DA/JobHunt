@@ -27,7 +27,7 @@ ensure ensured provide provided maintain maintained analyse analysed analyze ana
 monthly quarterly annual india remote hybrid onsite full time part contract intern internship""".split())
 
 SECTION_LIMITS = {"links": 12, "skills": 12, "skill_items": 40, "experience": 20, "bullets": 25,
-                  "projects": 20, "education": 10, "certifications": 25}
+                  "projects": 20, "education": 10, "certifications": 25, "positions": 8}
 
 
 class ResumeError(Exception):
@@ -51,8 +51,12 @@ def empty_profile():
     }
 
 
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
 def _text(value, limit=300):
-    return " ".join(str(value or "").split())[:limit]
+    """One line of text: invisible control characters removed, spaces tidied, cut to the limit."""
+    return " ".join(_CONTROL.sub("", str(value or "")).split())[:limit]
 
 
 def _lines(value, limit, item_limit=500):
@@ -76,6 +80,54 @@ def _entries(value, fields, limit, bullet_field="bullets"):
         if bullet_field:
             entry[bullet_field] = _lines(item.get(bullet_field), SECTION_LIMITS["bullets"])
         if any(entry.get(field) for field in fields):
+            out.append(entry)
+    return out
+
+
+EXPERIENCE_FIELDS = ("company", "role", "start", "end", "location")
+# "Title (Jul 2025 – Present)" inside a role line that lists several promotions, separated by ";".
+_ROLE_WITH_DATES = re.compile(r"^\s*(?P<title>.+?)\s*\((?P<start>[^()]+?)\s*[–—-]\s*(?P<end>[^()]+?)\)\s*$")
+
+
+def split_roles(role):
+    """Promotions typed into one role line ("A (Jun 2025 – Present); B (Jun 2024 – May 2025)") as separate positions,
+    newest first as written. Parts without dates (for example a line cut off when it was saved) are left out."""
+    parts = [part for part in str(role or "").split(";") if part.strip()]
+    found = [m for m in (_ROLE_WITH_DATES.match(part) for part in parts) if m]
+    return [{"title": _text(m["title"], 150), "start": _text(m["start"], 40), "end": _text(m["end"], 40)}
+            for m in found]
+
+
+def _positions(value):
+    """The titles held at one company (promotions), newest first, each with its own dates."""
+    if not isinstance(value, list):
+        return []
+    out = []
+    for item in value[:50]:
+        if isinstance(item, dict) and _text(item.get("title"), 150):
+            out.append({"title": _text(item.get("title"), 150), "start": _text(item.get("start"), 40),
+                        "end": _text(item.get("end"), 40)})
+    return out[:SECTION_LIMITS["positions"]]
+
+
+def _experience(value):
+    """Jobs, each with its facts, bullet points and (for promotions) the positions held there."""
+    if not isinstance(value, list):
+        return []
+    out = []
+    for item in value[:SECTION_LIMITS["experience"]]:
+        if not isinstance(item, dict):
+            continue
+        entry = {field: _text(item.get(field), 200) for field in EXPERIENCE_FIELDS}
+        entry["bullets"] = _lines(item.get("bullets"), SECTION_LIMITS["bullets"])
+        entry["positions"] = _positions(item.get("positions"))
+        if not entry["positions"]:
+            parsed = split_roles(item.get("role"))
+            if len(parsed) >= 2:  # several promotions typed into one line: give each its own line
+                entry["positions"], entry["role"] = parsed, parsed[0]["title"]
+        if entry["positions"] and not entry["role"]:
+            entry["role"] = entry["positions"][0]["title"]
+        if any(entry[field] for field in EXPERIENCE_FIELDS) or entry["positions"]:
             out.append(entry)
     return out
 
@@ -109,8 +161,7 @@ def clean_profile(raw):
         if items:
             profile["skills"].append({"group": _text(group.get("group"), 60) or "Skills", "items": items})
 
-    profile["experience"] = _entries(raw.get("experience"), ("company", "role", "start", "end", "location"),
-                                     SECTION_LIMITS["experience"])
+    profile["experience"] = _experience(raw.get("experience"))
     profile["projects"] = _entries(raw.get("projects"), ("name", "link"), SECTION_LIMITS["projects"])
     for project in profile["projects"]:
         project["link"] = normalize.safe_url(project["link"]) or ""
@@ -199,13 +250,17 @@ def extract_text(filename, data):
 
 IMPORT_RULES = """You convert a resume into JSON. Copy the facts exactly as written; never invent, guess or improve
 anything. If something is missing, leave it empty. Keep dates exactly as the resume writes them.
+If the person held several titles at one company (promotions), list each in "positions", newest first, with its own
+dates; put the latest title in "role" and the whole time at the company in "start" and "end". With one title, leave
+"positions" empty.
 
 Answer with only this JSON:
 {"contact": {"name": "", "title": "", "email": "", "phone": "", "location": ""},
  "links": [{"label": "", "url": ""}],
  "summary": "",
  "skills": [{"group": "", "items": [""]}],
- "experience": [{"company": "", "role": "", "start": "", "end": "", "location": "", "bullets": [""]}],
+ "experience": [{"company": "", "role": "", "start": "", "end": "", "location": "", "bullets": [""],
+                 "positions": [{"title": "", "start": "", "end": ""}]}],
  "projects": [{"name": "", "link": "", "bullets": [""]}],
  "education": [{"school": "", "degree": "", "year": "", "details": ""}],
  "certifications": [{"name": "", "issuer": "", "year": ""}]}"""
@@ -358,6 +413,7 @@ def draft_text(draft, profile):
         parts.extend(group.get("items", []))
     for entry in draft.get("experience", []) + draft.get("projects", []):
         parts += [entry.get("company", ""), entry.get("role", ""), entry.get("name", "")]
+        parts += [position["title"] for position in entry.get("positions") or [] if position["title"] != entry.get("role")]
         parts.extend(entry.get("bullets", []))
     for entry in profile.get("education", []):
         parts += [entry.get("school", ""), entry.get("degree", ""), entry.get("year", "")]
@@ -485,7 +541,36 @@ def tailor(job, profile, steps):
 
 COVER_RULES = """You write a short job application note (90-130 words) for the person whose resume is given.
 Use only facts from the resume. Never invent numbers, tools, employers or skills. Plain text, no greeting line
-placeholders like [Name], no markdown. Mention the role and two or three things from the resume that fit the advert."""
+placeholders like [Name], no markdown. Mention the role and two or three things from the resume that fit the advert.
+Reply with only the note itself: no introduction ("Here is…", "Based on the resume…"), no title, no closing remarks."""
+
+# What models put around the note: "Based on the provided resume, here is a job application note for …:",
+# a "**Job Application Note**" title, "Subject: …", and "Let me know if …" at the end.
+_NOTE_INTRO = re.compile(r"(?i)^\s*(?:based on|here is|here's|here are|sure|certainly|of course|below is|okay|ok)\b"
+                         r"(?=[^:\n]{0,250}\b(?:resume|note|letter|application|request|details|information|cv)\b)"
+                         r"[^:\n]{0,250}(?::|\.(?=\s*\n)|\n)\s*")
+_NOTE_TITLE = re.compile(r"(?i)^\s*(?:#{1,6}\s*|\*\*|__)?\s*(?:(?:job\s+)?application\s+note|cover\s+(?:note|letter)|"
+                         r"subject\s*:[^\n*]*|re\s*:[^\n*]*)\s*(?:\*\*|__)?\s*:?\s*")
+_NOTE_BOLD_TITLE = re.compile(r"^\s*(?:\*\*|__)[^*_\n]{1,80}(?:\*\*|__)\s*:?\s*")
+# Only on a line of its own at the end: "Please let me know a good time to talk." inside the note stays.
+_NOTE_OUTRO = re.compile(r"(?i)\n\s*(?:let me know|feel free to|i hope this|hope this helps|note:)[^\n]*\s*$")
+
+
+def clean_note(text):
+    """Only the note: no AI introduction, title, closing remark or markdown. Works on saved notes too, which were
+    stored on one line."""
+    text = str(text or "").strip()
+    for _ in range(3):  # an introduction can be followed by a title, which can be followed by another one
+        before = text
+        text = _NOTE_INTRO.sub("", text, count=1)
+        text = _NOTE_TITLE.sub("", text, count=1)
+        text = _NOTE_BOLD_TITLE.sub("", text, count=1)
+        if text == before:
+            break
+    text = _NOTE_OUTRO.sub("", text)
+    text = re.sub(r"(\*\*|__)(.+?)\1", r"\2", text)  # **bold** and __bold__
+    text = re.sub(r"(?m)^\s*#{1,6}\s*", "", text)
+    return " ".join(text.replace("**", "").split())
 
 
 def cover_note(job, profile, steps):
@@ -493,7 +578,7 @@ def cover_note(job, profile, steps):
                 {"role": "user", "content": _job_brief(job, job_keywords(job, 12))
                  + "\n\nThe person's resume as JSON:\n" + json.dumps(profile, ensure_ascii=False)}]
     text, model = ai.chat(messages, steps, max_tokens=600)
-    note = " ".join(text.split())[:1500]
+    note = clean_note(text)[:1500]
     return {"note": note, "model": model,
             "flags": verify(profile, {"summary": note, "skills": [], "experience": [], "projects": []}, job_keywords(job, 12))}
 
@@ -532,8 +617,9 @@ IMPORT_SCHEMA = _object(
     links={"type": "array", "items": _object(label=_STRING, url=_STRING)},
     summary=_STRING,
     skills={"type": "array", "items": _object(group=_STRING, items=_TEXTS)},
-    experience={"type": "array", "items": _object(company=_STRING, role=_STRING, start=_STRING, end=_STRING,
-                                                   location=_STRING, bullets=_TEXTS)},
+    experience={"type": "array", "items": _object(
+        company=_STRING, role=_STRING, start=_STRING, end=_STRING, location=_STRING, bullets=_TEXTS,
+        positions={"type": "array", "items": _object(title=_STRING, start=_STRING, end=_STRING)})},
     projects={"type": "array", "items": _object(name=_STRING, link=_STRING, bullets=_TEXTS)},
     education={"type": "array", "items": _object(school=_STRING, degree=_STRING, year=_STRING, details=_STRING)},
     certifications={"type": "array", "items": _object(name=_STRING, issuer=_STRING, year=_STRING)},
@@ -720,7 +806,7 @@ def shorten(job, profile, draft, keywords, over, steps):
 def revise_messages(job, profile, draft, keywords, feedback):
     current = json.loads(json.dumps({k: draft.get(k) for k in ("summary", "skills", "experience", "projects")}))
     for entry in current["experience"] or []:  # a copy: the draft itself keeps its dates
-        for field in ("start", "end", "location"):
+        for field in ("start", "end", "location", "positions"):
             entry.pop(field, None)
     return [{"role": "system", "content": REVISE_RULES},
             {"role": "user", "content": _job_brief(job, keywords)

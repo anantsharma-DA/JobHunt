@@ -1,5 +1,8 @@
 """JobHunt web app: serves the page and the JSON API. Start with run.bat."""
 import collections
+import json
+import threading
+from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -14,8 +17,8 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, StringConstr
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import (ai, applicant_update, company_import, db, errors, guard, interview, matching, normalize, resume,
-                 resume_pdf, search, secret_store, tailor_run)
+from app import (ai, applicant_update, company_import, db, errors, guard, insights, interview, job_warnings, matching,
+                 normalize, outreach, practice, resume, resume_pdf, scheduler, search, secret_store, tailor_run, tracker)
 from app.cities import CITIES
 from app.sources import ats, naukri
 
@@ -47,8 +50,26 @@ SECURITY_HEADERS = {
 SECURITY_HEADERS["X-Permitted-Cross-Domain-Policies"] = "none"
 
 db.connect()
+
+
+def _repair_saved_questions():
+    """Saved interview answers from before the current checks are cleaned once, in the background (it may open
+    source pages and ask the AI to draft answers that were only cut-off previews)."""
+    try:
+        interview.repair_saved(_ai_steps(), _profile())
+    except Exception as exc:  # never stops the app; the next start tries again
+        errors.hidden(exc, "Cleaning saved interview answers")
+
+
+@asynccontextmanager
+async def _lifespan(_app):
+    scheduler.start()  # reminders and the daily auto-search, only while the server runs
+    threading.Thread(target=_repair_saved_questions, daemon=True).start()
+    yield
+
+
 # No /docs, /redoc or /openapi.json: the page doesn't need them, and they would list every action the API offers.
-app = FastAPI(title="JobHunt", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="JobHunt", docs_url=None, redoc_url=None, openapi_url=None, lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -94,12 +115,17 @@ async def protect_local_app(request: Request, call_next):
     host_header = request.headers.get("host", "")
     if "@" in host_header or urlparse(f"//{host_header}").hostname not in ALLOWED_HOSTS:
         return _refuse(400, "JobHunt only answers on localhost.")
+    # Another website open in the same browser can't read JobHunt's answers, but it could still make it *do* things
+    # (fetch AI model lists with your key, open pages). Browsers label every request with where it came from
+    # (Sec-Fetch-Site), so any API request started by another site is refused, reads included.
+    if request.url.path.startswith("/api/") and request.headers.get("sec-fetch-site") in ("cross-site", "same-site"):
+        return _refuse(403, "Request from another website refused.")
     if request.method not in SAFE_METHODS:
         origin = request.headers.get("origin")
         if origin and urlparse(origin).netloc.lower() != host_header.lower():
             return _refuse(403, "Request from another website refused.")
         if request.headers.get("sec-fetch-site") in ("cross-site", "same-site"):
-            return _refuse(403, "Request from another website refused.")
+            return _refuse(403, "Request from another website refused.")  # changes outside /api/ too
         if request.headers.get(CSRF_HEADER) != "1":
             return _refuse(403, "Request refused: it did not come from the JobHunt page.")
     response = await call_next(request)
@@ -122,7 +148,7 @@ app.add_middleware(guard.Guard, headers=SECURITY_HEADERS)
 def index():
     # Version the asset links by file time so every browser fetches the new file after an update.
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    for name in ("styles.css", "app.js", "resume.js"):
+    for name in ("styles.css", "app.js", "resume.js", "tracker.js", "insights.js"):
         version = int((STATIC_DIR / name).stat().st_mtime)
         html = html.replace(f'"/static/{name}"', f'"/static/{name}?v={version}"')
     if db.get_settings()["theme"] == "dark":
@@ -243,11 +269,25 @@ def list_jobs():
     rows = db.list_jobs()
     ratings = _company_ratings(rows)
     tailored = db.tailored_by_job()  # which jobs already have a resume made for them
+    histories = db.job_histories()
+    # Roles you already applied to (the same role at the same company can show up again as a repost).
+    applied = collections.defaultdict(list)
+    for job in rows:
+        if job["status"] == "applied":
+            applied[job_warnings.history_key(job["title"], job["company"])].append((job["id"], job.get("applied_at")))
     jobs = []
     for job in rows:
         if job["company_rating"] is None:
             job.update(ratings.get(normalize.company_key(job["company"]), {}))
         text = f"{job.pop('description') or ''}\n{job.pop('skills_listed') or ''}"
+        key = job_warnings.history_key(job["title"], job["company"])
+        job["scam"] = job_warnings.scam_check(job, text) if settings["warn_scam"] else None
+        job["scam_ai"] = json.loads(job["scam_ai"]) if job.get("scam_ai") else None
+        job["ghost"] = (job_warnings.ghost_check(job, histories.get(key), settings["ghost_days"], settings["ghost_reposts"])
+                        if settings["warn_ghost"] else None)
+        job["notice"] = job_warnings.notice_need(text)
+        others = [day for other_id, day in applied.get(key, []) if other_id != job["id"]]
+        job["already_applied"] = {"on": others[0]} if others else None
         # Score the title against the search that found the job, so older jobs keep their score after a new search.
         score, matched = matching.score_job(job["title"], text, job["search_titles"] or titles, skills)
         job.pop("dedupe_key")
@@ -264,7 +304,103 @@ def list_jobs():
             tailored=tailored.get(job["id"]),
         )
         jobs.append(job)
-    return {"jobs": jobs}
+    answers = (_profile() or {}).get("answers") or {}
+    return {"jobs": jobs, "your_notice_days": job_warnings.notice_days(answers.get("notice_period"))}
+
+
+# ---------- Applied board: stages, dates, notes, reminders ----------
+
+DateText = Annotated[str, StringConstraints(pattern=r"^(\d{4}-\d{2}-\d{2})?$")]
+DateTimeText = Annotated[str, StringConstraints(pattern=r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})?$")]
+
+
+class ApplicationIn(Strict):
+    """What you can change on an application. "" clears a date."""
+    stage: Literal["applied", "followed_up", "interview", "offer", "rejected", "no_reply"] | None = None
+    applied_on: DateText | None = None
+    followup_on: DateText | None = None
+    interview_at: DateTimeText | None = None
+    notes: Text4000 | None = None
+    contact_name: Text120 | None = None
+    contact_email: Annotated[str, StringConstraints(max_length=200, pattern=r"^([^\s@<>\"']+@[^\s@<>\"']+\.[^\s@<>\"']+)?$")] | None = None
+    contact_phone: Annotated[str, StringConstraints(max_length=40, pattern=r"^[0-9+()\-\s.]*$")] | None = None
+
+
+def _applied_jobs():
+    return [j for j in db.list_jobs() if j["status"] == "applied"]
+
+
+@app.get("/api/applications")
+def list_applications():
+    """Every application on the Applied board with its stage and dates, and the reminders due now."""
+    followup_days = db.get_settings()["followup_days"]
+    jobs, apps = _applied_jobs(), db.list_applications()
+    return {"stages": [{"id": s, "label": tracker.LABELS[s]} for s in tracker.STAGES],
+            "items": {str(j["id"]): tracker.view(j, apps.get(j["id"]), followup_days) for j in jobs},
+            "due": tracker.due_items(jobs, apps, followup_days), "followup_days": followup_days}
+
+
+@app.put("/api/jobs/{job_id}/application")
+def update_application(job_id: Id, body: ApplicationIn):
+    job = _job_or_404(job_id)
+    changes = body.model_dump(exclude_none=True)  # only what you sent
+    for field in ("applied_on", "followup_on", "interview_at"):
+        if changes.get(field) == "":
+            changes[field] = None  # "" clears that date
+    try:
+        return tracker.update(job, changes, db.get_settings()["followup_days"])
+    except ValueError as exc:
+        raise HTTPException(400, "That stage isn't one JobHunt knows.") from exc
+
+
+# ---------- Daily auto-search ----------
+
+class ScheduleIn(Strict):
+    enabled: bool
+
+
+@app.get("/api/autosearch")
+def autosearch_state():
+    settings = db.get_settings()
+    return {"task": scheduler.task_exists(), "last": settings["autosearch_result"], "running": scheduler._state["running"]}
+
+
+@app.post("/api/autosearch/run")
+def autosearch_now():
+    """Runs the daily auto-search now (the button on the Settings tab, or run.bat --auto when JobHunt is already open)."""
+    if scheduler._state["running"] or search.status()["running"]:
+        raise HTTPException(409, "A search is already running. Wait for it to finish.")
+    threading.Thread(target=scheduler.run_autosearch, daemon=True, name="jobhunt-autosearch-now").start()
+    return {"started": True}
+
+
+@app.post("/api/autosearch/schedule")
+def autosearch_schedule(body: ScheduleIn):
+    """Asks Windows Task Scheduler to start JobHunt for the daily search (for your Windows user only), or stops that."""
+    ok, message = scheduler.set_task(body.enabled, db.get_settings())
+    if not ok:
+        raise HTTPException(400, message)
+    db.save_settings({"autosearch_windows": body.enabled})
+    return {"task": scheduler.task_exists(), "message": message}
+
+@app.post("/api/jobs/{job_id}/scam-check")
+def scam_check_with_ai(job_id: Id):
+    """A second opinion from your AI service on whether this advert looks like a scam. Only the advert is sent."""
+    job = _job_or_404(job_id)
+    messages = [{"role": "system", "content": job_warnings.AI_RULES},
+                {"role": "user", "content": job_warnings.ai_brief(job)}]
+    try:
+        data, model = ai.chat_json(messages, _ai_steps(), schema=job_warnings.AI_SCHEMA, max_tokens=800, timeout=60)
+    except ai.AIError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    risk = data.get("risk")
+    if risk not in ("low", "medium", "high"):
+        raise HTTPException(400, "The AI didn't give a clear answer. Try again, or pick another model on the Settings tab.")
+    # Long reasons are shortened at a sentence end (as practice feedback is), never mid-word.
+    reasons = [interview.fit(" ".join(str(r).split()), 400) for r in (data.get("reasons") or []) if str(r).strip()][:5]
+    result = {"risk": risk, "reasons": reasons, "model": model, "checked_at": datetime.now().isoformat(timespec="minutes")}
+    db.set_scam_ai(job_id, result)
+    return result
 
 
 @app.get("/api/jobs/{job_id}")
@@ -299,7 +435,7 @@ def fetch_job_applicants(job_id: Id):
         raise HTTPException(400, "Applicant counts are fetched on request only for Naukri jobs.")
     if applicant_update.is_running():
         return {"applicants": job["applicants"], "applicants_text": job["applicants_text"], "applicants_checked": job["applicants_checked"],
-                "error": "Update Applicants (Naukri) is running; counts appear on the job cards as they are read"}
+                "error": "Update Applicants is running; counts appear on the job cards as they are read"}
     wording, error = naukri.fetch_applicants(naukri_url)
     if error:
         return {"applicants": job["applicants"], "applicants_text": job["applicants_text"],
@@ -312,10 +448,48 @@ def fetch_job_applicants(job_id: Id):
 
 @app.post("/api/jobs/clear")
 def clear_jobs():
-    return {"deleted": db.clear_new_jobs()}
+    return {"deleted": _clear(["new"])["new"]}
 
 
-# ---------- Update Applicants (Naukri) ----------
+# ---------- Clear data (Settings tab) ----------
+
+class ClearIn(Strict):
+    parts: list[Literal["new", "saved", "applied", "hidden", "history", "resume", "tailored", "companies",
+                        "qa_titles", "qa_companies", "practice"]] = Field(min_length=1, max_length=11)
+
+
+@app.get("/api/data")
+def data_counts():
+    """How much each tab holds, for the Clear data checkboxes."""
+    return db.data_counts()
+
+
+def _clear(parts):
+    job_parts = {"new", "saved", "applied", "hidden"} & set(parts)
+    if job_parts and (search.status()["running"] or applicant_update.is_running() or scheduler._state["running"]):
+        raise HTTPException(409, "A search or applicant update is running. Wait for it to finish, then clear.")
+    if (job_parts or "tailored" in parts) and tailor_run.is_running():
+        raise HTTPException(409, "A resume is being tailored. Wait for it to finish, or press Stop, then clear.")
+    # PDFs first: one open in another program stops the clearing before anything is deleted from the database.
+    for pdf in db.tailored_files(parts):
+        path = _resume_file({"pdf_path": pdf})
+        if path is None:
+            continue  # already gone, or not inside the resumes folder (never touched)
+        try:
+            path.unlink()
+        except OSError as exc:
+            raise HTTPException(409, f"{path.name} is open in another program. Close it and press Clear data again.") from exc
+    return db.clear_data(parts)
+
+
+@app.post("/api/data/clear")
+def clear_data(body: ClearIn):
+    """Deletes the ticked parts. Removing jobs also removes their tracker details, referral messages and tailored
+    resumes (with the PDFs), so nothing is left behind. It can't be undone."""
+    return {"removed": _clear(body.parts), "counts": db.data_counts()}
+
+
+# ---------- Update Applicants (Naukri jobs) ----------
 
 @app.post("/api/applicants/update")
 def start_applicant_update():
@@ -426,7 +600,7 @@ def test_ai():
 
 @app.get("/api/resume")
 def get_resume():
-    profile = db.get_resume() or resume.empty_profile()
+    profile = _profile() or resume.empty_profile()
     return {"profile": profile, "usable": resume.profile_is_usable(profile)}
 
 
@@ -461,7 +635,15 @@ async def import_resume(request: Request, filename: str = Query("", max_length=2
 
 class ResumeDraftIn(Strict):
     draft: dict
+    design: Literal["modern", "classic", "compact"] | None = None  # None: the default from the Settings tab
     accept_flags: bool = False  # you have seen the flagged wording and want it anyway
+
+
+def _profile():
+    """Your saved resume details, tidied the current way (for example, promotions typed into one role line become
+    separate positions). None if nothing is saved yet. What is stored only changes when you press Save."""
+    stored = db.get_resume()
+    return resume.clean_profile(stored) if stored else None
 
 
 def _job_or_404(job_id):
@@ -478,12 +660,13 @@ def saved_tailoring(job_id: Id):
     draft = (row.get("data") or {}).get("draft")
     if not draft:
         return {"draft": None}  # nothing tailored yet; the page then asks the AI
-    profile = db.get_resume() or resume.empty_profile()
+    profile = _profile() or resume.empty_profile()
     keywords = (row["data"].get("keywords")) or resume.job_keywords(_job_or_404(job_id))
     return {"draft": draft, "flags": resume.verify(profile, draft, keywords), "keywords": keywords,
             "ats": row["data"].get("ats") or resume.ats_report(profile, draft, keywords),
             "human": row["data"].get("human") or resume.human_score(draft, []),
-            "model": row.get("model"), "created_at": row.get("created_at")}
+            "model": row.get("model"), "created_at": row.get("created_at"),
+            "design": row["data"].get("design") or db.get_settings()["resume_design"]}
 
 
 @app.post("/api/jobs/{job_id}/tailor")
@@ -491,7 +674,7 @@ def tailor_for_job(job_id: Id):
     """Asks the AI to fit your resume to this job. Nothing is written to a file yet; you review it first."""
     job = _job_or_404(job_id)
     try:
-        result = resume.tailor(job, db.get_resume(), _ai_steps())
+        result = resume.tailor(job, _profile(), _ai_steps())
     except (resume.ResumeError, ai.AIError) as exc:
         raise HTTPException(400, str(exc)) from exc
     previous = db.get_tailored(job_id) or {}
@@ -504,34 +687,36 @@ def tailor_for_job(job_id: Id):
 def make_resume_pdf(job_id: Id, body: ResumeDraftIn):
     """Checks the approved wording once more, then prints the PDF."""
     job = _job_or_404(job_id)
-    profile = db.get_resume()
+    profile = _profile()
     if not resume.profile_is_usable(profile):
         raise HTTPException(400, "Fill in the Resume tab first (at least your name and one job or project).")
+    design = body.design or db.get_settings()["resume_design"]
     try:
         draft = resume.clean_draft(body.draft, profile)
         keywords = resume.job_keywords(job)
         flags = resume.verify(profile, draft, keywords)
         if flags and not body.accept_flags:
             return {"needs_review": True, "flags": flags, "draft": draft}
-        made = resume_pdf.write_pdf(profile, draft, job)
+        made = resume_pdf.write_pdf(profile, draft, job, design)
     except resume_pdf.TooLong as exc:
-        return _shorten_to_one_page(job, profile, draft, keywords, exc.over)
+        return _shorten_to_one_page(job, profile, draft, keywords, exc.over, design)
     except resume.ResumeError as exc:
         raise HTTPException(400, str(exc)) from exc
     except resume_pdf.PdfError as exc:
         raise HTTPException(400, str(exc)) from exc
     report = resume.ats_report(profile, draft, keywords, pdf_text=made["text"])
     previous = db.get_tailored(job_id) or {}
-    db.save_tailored(job_id, {**(previous.get("data") or {}), "draft": draft, "keywords": keywords, "ats": report},
+    db.save_tailored(job_id, {**(previous.get("data") or {}), "draft": draft, "keywords": keywords, "ats": report,
+                              "design": design},
                      pdf_path=made["path"], ats_score=report["score"], model=previous.get("model"))
     return {"needs_review": False, "file": made["name"], "pages": made["pages"], "layout": made["layout"],
-            "links": made["links"], "ats": report}
+            "design": design, "links": made["links"], "ats": report}
 
 
 SHORTEN_TRIES = 2
 
 
-def _shorten_to_one_page(job, profile, draft, keywords, over):
+def _shorten_to_one_page(job, profile, draft, keywords, over, design=resume_pdf.DEFAULT_DESIGN):
     """Every tailored resume is one page. When the wording runs over even in the tightest layout, the AI cuts it
     until it fits; nothing is printed yet, so you check the shorter wording before pressing Make PDF again."""
     before = round((over - 1) * 100)
@@ -539,7 +724,7 @@ def _shorten_to_one_page(job, profile, draft, keywords, over):
     for _ in range(SHORTEN_TRIES):
         try:
             draft, model = resume.shorten(job, profile, draft, keywords, check["over"], _ai_steps())
-            check = resume_pdf.fits(profile, draft)
+            check = resume_pdf.fits(profile, draft, design)
         except (ai.AIError, resume.ResumeError) as exc:
             raise HTTPException(400, f"This resume is about {before}% longer than one page, and the AI couldn't "
                                      f"shorten it: {exc} Remove a few bullets yourself, then press Make PDF.") from exc
@@ -548,7 +733,7 @@ def _shorten_to_one_page(job, profile, draft, keywords, over):
         if check["fits"]:
             break
     previous = db.get_tailored(job["id"]) or {}
-    db.save_tailored(job["id"], {**(previous.get("data") or {}), "draft": draft, "keywords": keywords},
+    db.save_tailored(job["id"], {**(previous.get("data") or {}), "draft": draft, "keywords": keywords, "design": design},
                      pdf_path=previous.get("pdf_path"), ats_score=previous.get("ats_score"), model=model)
     return {"needs_review": True, "shortened": True, "fits": check["fits"], "was_over": before,
             "still_over": 0 if check["fits"] else round((check["over"] - 1) * 100), "model": model,
@@ -612,7 +797,7 @@ def download_resume(job_id: Id, download: bool = False):
 @app.post("/api/jobs/{job_id}/cover-note")
 def make_cover_note(job_id: Id):
     job = _job_or_404(job_id)
-    profile = db.get_resume()
+    profile = _profile()
     if not resume.profile_is_usable(profile):
         raise HTTPException(400, "Fill in the Resume tab first (at least your name and one job or project).")
     try:
@@ -629,7 +814,7 @@ def make_cover_note(job_id: Id):
 def apply_pack(job_id: Id):
     """Everything to have ready before you press Apply: the tailored resume, your standard answers and the note."""
     job = _job_or_404(job_id)
-    profile = db.get_resume() or resume.empty_profile()
+    profile = _profile() or resume.empty_profile()
     row = db.get_tailored(job_id) or {}
     data = row.get("data") or {}
     return {
@@ -638,7 +823,7 @@ def apply_pack(job_id: Id):
         "resume": {"file": Path(row["pdf_path"]).name if row.get("pdf_path") else None,
                    "ats_score": row.get("ats_score"), "created_at": row.get("created_at"),
                    "folder": str(resume_pdf.RESUME_DIR)},
-        "cover_note": data.get("cover_note", ""),
+        "cover_note": resume.clean_note(data.get("cover_note", "")),
         "has_draft": bool(data.get("draft")),
         "profile_ready": resume.profile_is_usable(profile),
     }
@@ -659,7 +844,7 @@ def start_tailor_run(job_id: Id, body: TailorRunIn):
     if tailor_run.is_running():
         raise HTTPException(409, "A resume is already being tailored. Wait for it to finish, or press Stop.")
     try:
-        result = tailor_run.start(job, db.get_resume(), _ai_steps(), targets, settings["tailor_rounds"],
+        result = tailor_run.start(job, _profile(), _ai_steps(), targets, settings["tailor_rounds"],
                                   body.check_ceiling)
     except (resume.ResumeError, ai.AIError) as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -685,7 +870,7 @@ class SkillsIn(Strict):
 @app.post("/api/resume/skills")
 def add_resume_skills(body: SkillsIn):
     """Adds skills you confirmed you really have (from an advert's missing keywords) to your resume details."""
-    profile = db.get_resume()
+    profile = _profile()
     if not profile:
         raise HTTPException(400, "Fill in the Resume tab first.")
     updated, added = resume.add_skills(profile, body.skills)
@@ -707,9 +892,19 @@ class RefreshIn(Strict):
 
 def _interview(title, company, refresh):
     try:
-        return interview.find(title, company, _ai_steps(), db.get_resume(), refresh)
+        result = interview.find(title, company, _ai_steps(), _profile(), refresh)
     except interview.SearchError as exc:
         raise HTTPException(400, str(exc)) from exc
+    # Your minimum from the Settings tab: company searches (Frequently Asked Questions) and job-title searches have
+    # their own. Only a search is compared with it, not opening saved questions; nothing is searched again for it.
+    settings = db.get_settings()
+    minimum = settings["faq_min_questions"] if company else settings["iq_min_questions"]
+    found = result.get("new_count")
+    if found and minimum and found < minimum:  # (0 found already says "0 new questions found")
+        what = "this job" if company else "this profile"
+        result["below_minimum"] = (f"Only found {found} question{'' if found == 1 else 's'} for {what} "
+                                   f"(your minimum is {minimum}).")
+    return result
 
 
 @app.post("/api/interview/search")
@@ -752,6 +947,102 @@ def put_interview_settings(body: TavilyIn):
     return _interview_settings()
 
 
+# ---------- Mock interview: typed practice on saved questions ----------
+
+class PracticeIn(Strict):
+    title: Text120
+    company: Text120 = ""
+    question: Text2000
+    answer: Text4000
+    session_id: Annotated[str, StringConstraints(max_length=40, pattern=r"^[0-9a-f]*$")] = ""
+    mode: Literal["", "each", "end"] = ""  # feedback after each question, or for all at the end
+
+
+@app.get("/api/practice/sessions")
+def practice_sessions(title: str = Query(..., min_length=1, max_length=120, pattern=_PRINTABLE),
+                      company: str = Query("", max_length=120, pattern=_PRINTABLE)):
+    """Earlier practice sessions for a job title (or company + title), newest first, to see the improvement."""
+    return practice.sessions(title, company)
+
+
+@app.get("/api/practice")
+def practice_session(title: str = Query(..., min_length=1, max_length=120, pattern=_PRINTABLE),
+                     company: str = Query("", max_length=120, pattern=_PRINTABLE)):
+    """The saved questions for a job title (or company + title), with every earlier attempt at each."""
+    try:
+        return practice.session(title, company)
+    except practice.PracticeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/practice/answer")
+def practice_answer(body: PracticeIn):
+    """Scores one typed answer with your AI service, using only your resume facts, and keeps the attempt."""
+    try:
+        return practice.answer(body.title, body.company, body.question, body.answer, _profile(), _ai_steps(),
+                               body.session_id, body.mode)
+    except practice.PracticeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except ai.AIError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+# ---------- Referral helper ----------
+
+@app.get("/api/jobs/{job_id}/outreach")
+def saved_outreach(job_id: Id):
+    job = _job_or_404(job_id)
+    return {**(db.get_outreach(job_id) or {}), "people_url": outreach.people_search_url(job.get("company"))}
+
+
+@app.post("/api/jobs/{job_id}/outreach")
+def write_outreach(job_id: Id):
+    """A referral request and a recruiter note for this job, from your saved details only."""
+    job = _job_or_404(job_id)
+    try:
+        result = outreach.write(job, _profile(), _ai_steps())
+    except (resume.ResumeError, ai.AIError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    saved = db.save_outreach(job_id, result)
+    return {**saved, "people_url": outreach.people_search_url(job.get("company"))}
+
+
+# ---------- Insights: your applications, salary, skill gaps ----------
+
+@app.get("/api/insights/applications")
+def insights_applications():
+    jobs, apps, tailored = insights.application_inputs()
+    return insights.applications(jobs, apps, tailored, db.get_settings())
+
+
+@app.get("/api/insights/salary")
+def insights_salary(title: str = Query("", max_length=120, pattern=_PRINTABLE),
+                    city: str = Query("", max_length=60, pattern=_PRINTABLE),
+                    exp: Literal["", "0-2", "2-5", "5-8", "8+"] = Query("")):
+    return {**insights.salary(db.list_jobs(), _profile(), title, city, exp),
+            "states": [{"name": name, "tax": tax} for name, tax in sorted(insights.PROFESSIONAL_TAX.items())]}
+
+
+class InHandIn(Strict):
+    ctc: float = Field(gt=0, le=100_000_000)  # rupees a year
+    variable_pct: float = Field(0, ge=0, le=60)
+    basic_pct: float = Field(50, ge=20, le=80)
+    pf_capped: bool = False
+    employer_pf_in_ctc: bool = True
+    gratuity_in_ctc: bool = True
+    professional_tax: int = Field(0, ge=0, le=2500)  # the Constitution caps it at ₹2,500 a year
+
+
+@app.post("/api/insights/in-hand")
+def insights_in_hand(body: InHandIn):
+    return insights.in_hand(**body.model_dump())
+
+
+@app.get("/api/insights/skills")
+def insights_skills():
+    return insights.skill_gaps(db.list_jobs(), _profile(), db.get_settings())
+
+
 # ---------- Companies ----------
 
 BOARD_SEARCH_LABELS = {"indeed": "Indeed search", "linkedin": "LinkedIn search", "both": "Indeed + LinkedIn search"}
@@ -766,7 +1057,7 @@ def _platform_label(platform):
 def _company_out(company):
     platform = ats.detect_platform(company.get("feed_url") or company["careers_url"])["platform"]
     return {**company, "careers_url": normalize.safe_url(company["careers_url"]), "enabled": bool(company["enabled"]),
-            "platform": platform, "platform_label": _platform_label(platform)}
+            "platform": platform, "platform_label": _platform_label(platform), "roles": company.get("roles") or []}
 
 
 def _clean_url(url):
@@ -808,7 +1099,7 @@ def _import_rows(rows, problems):
         checks = list(pool.map(lambda r: _check_link(r["careers_url"]), to_add))
     platforms = collections.Counter()
     for row, (feed, note) in zip(to_add, checks):
-        db.add_company(row["name"], row["careers_url"], feed, note)
+        db.add_company(row["name"], row["careers_url"], feed, note, _clean_roles(row.get("roles")))
         platforms[_platform_label(ats.detect_platform(feed or row["careers_url"])["platform"])] += 1
     return {
         "added": len(to_add),
@@ -823,12 +1114,29 @@ def _import_rows(rows, problems):
 class CompanyIn(Strict):
     name: Text200
     careers_url: Text2048 = ""
+    roles: list[Text60] = Field([], max_length=10)  # e.g. "Data Analyst": used only to filter the list
 
 
 class CompanyPatch(Strict):
     name: Text200 | None = None
     careers_url: Text2048 | None = None
     enabled: bool | None = None
+    roles: list[Text60] | None = Field(None, max_length=10)
+
+
+class CompaniesInSearch(Strict):
+    ids: list[Annotated[int, Field(ge=1, le=MAX_ID)]] = Field(max_length=5000)
+    enabled: bool
+
+
+def _clean_roles(roles):
+    """Tidied role tags, each once, in the order given."""
+    out = {}
+    for role in roles or []:
+        role = " ".join(role.split())
+        if role:
+            out.setdefault(role.lower(), role)
+    return list(out.values())
 
 
 @app.get("/api/companies")
@@ -845,8 +1153,14 @@ def add_company(body: CompanyIn):
         raise HTTPException(400, f"{name} is already in your list.")
     url = _clean_url(body.careers_url)
     feed, note = _check_link(url)
-    company_id = db.add_company(name, url, feed, note)
+    company_id = db.add_company(name, url, feed, note, _clean_roles(body.roles))
     return next(_company_out(c) for c in db.list_companies() if c["id"] == company_id)
+
+
+@app.post("/api/companies/in-search")
+def companies_in_search(body: CompaniesInSearch):
+    """Ticks or unticks "In search" for the listed companies (the All box: every one, or only those filtered)."""
+    return {"changed": db.set_companies_enabled(set(body.ids), body.enabled)}
 
 
 @app.patch("/api/companies/{company_id}")
@@ -854,6 +1168,8 @@ def update_company(company_id: Id, body: CompanyPatch):
     fields = body.model_dump(exclude_none=True)
     if "enabled" in fields:
         fields["enabled"] = int(fields["enabled"])
+    if "roles" in fields:
+        fields["roles"] = _clean_roles(fields["roles"])
     if "name" in fields:
         fields["name"] = fields["name"].strip()
         if not fields["name"]:
@@ -902,10 +1218,10 @@ async def import_companies(request: Request, filename: str = Query("", max_lengt
 @app.get("/api/companies/template.csv")
 def companies_template():
     text = (
-        "Company name,Careers link\n"
-        "Rubrik,https://boards.greenhouse.io/rubrik\n"
-        "NVIDIA,https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite\n"
-        "Infosys,\n"
+        "Company name,Careers link,Role\n"
+        "Rubrik,https://boards.greenhouse.io/rubrik,Data Analyst\n"
+        "NVIDIA,https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite,Data Analyst; Business Analyst\n"
+        "Infosys,,Business Analyst\n"
     )
     return Response(text, media_type="text/csv", headers={"Content-Disposition": 'attachment; filename="jobhunt-companies-template.csv"'})
 
@@ -943,6 +1259,19 @@ class SettingsIn(Strict):
     company_search_sites: Literal["indeed", "linkedin", "both"] | None = None
     search_cities: list[CityName] | None = Field(None, max_length=50)
     theme: Literal["light", "dark"] | None = None
+    resume_design: Literal["modern", "classic", "compact"] | None = None
+    faq_min_questions: int | None = Field(None, ge=0, le=30)  # 0 = no "only found N" message
+    followup_days: int | None = Field(None, ge=1, le=60)
+    notify_on: bool | None = None
+    autosearch_on: bool | None = None
+    autosearch_time: Annotated[str, StringConstraints(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")] | None = None
+    autosearch_days: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]] | None = Field(None, max_length=7)
+    autosearch_min_match: int | None = Field(None, ge=0, le=100)
+    warn_scam: bool | None = None
+    warn_ghost: bool | None = None
+    ghost_days: int | None = Field(None, ge=14, le=365)
+    ghost_reposts: int | None = Field(None, ge=1, le=20)
+    iq_min_questions: int | None = Field(None, ge=0, le=30)
     ats_target: int | None = Field(None, ge=0, le=100)  # 0 = no target
     human_target: int | None = Field(None, ge=0, le=100)
     tailor_rounds: int | None = Field(None, ge=1, le=10)

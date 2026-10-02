@@ -7,7 +7,6 @@ credits, or filling memory with a huge upload.
 """
 import collections
 import json
-import os
 import re
 import threading
 import time
@@ -25,19 +24,16 @@ RULES = [
     # Changing API keys: few legitimate reasons to do it often.
     ("keys", 10, 60, {"PUT"}, r"/api/ai|/api/interview/settings"),
     # Each of these calls an AI service (your credits) or opens Microsoft Edge.
-    ("ai", 20, 60, {"POST"}, rf"{_JOB}/(tailor|tailor-run|cover-note|resume)|/api/resume/import|/api/ai/test"),
+    ("ai", 20, 60, {"POST"}, rf"{_JOB}/(tailor|tailor-run|cover-note|resume|scam-check|outreach)|/api/resume/import|/api/ai/test"
+                           r"|/api/practice/answer"),
     ("ai", 20, 60, {"GET"}, r"/api/ai/models"),
     # Each of these searches the web or opens other websites (Tavily credits, job sites that block heavy use).
     ("web", 20, 60, {"POST"}, rf"/api/interview/search|{_JOB}/(interview|applicants)|/api/companies(/import|/\d{{1,10}}/test)?"
-                              r"|/api/search|/api/applicants/update"),
+                              r"|/api/search|/api/applicants/update|/api/autosearch/(?:run|schedule)"),
     ("web", 20, 60, {"PATCH"}, r"/api/companies/\d{1,10}"),
 ]
 SLOW_BUCKETS = {"ai", "web"}
-# Automated tests make hundreds of requests a minute; they start their own server with a larger allowance. This can only
-# be set on this computer when JobHunt starts; run.bat never sets it.
-_SCALE = max(1, min(1000, int(os.environ.get("JOBHUNT_RATE_LIMIT_SCALE", "1") or 1)))
-_RULES = [(bucket, limit * _SCALE, window, methods, re.compile(pattern))
-          for bucket, limit, window, methods, pattern in RULES]
+_RULES = [(bucket, limit, window, methods, re.compile(pattern)) for bucket, limit, window, methods, pattern in RULES]
 
 
 class RateLimiter:
@@ -60,10 +56,6 @@ class RateLimiter:
             for bucket, _, _ in buckets:
                 self._hits[(client, bucket)].append(now)
         return None
-
-    def reset(self):
-        with self._lock:
-            self._hits.clear()
 
 
 limiter = RateLimiter()

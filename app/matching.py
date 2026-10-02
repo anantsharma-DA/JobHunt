@@ -14,7 +14,7 @@ def _words(text):
     return [w for w in re.split(r"[^a-z0-9+#.]+", (text or "").lower()) if w and w not in FILLER_WORDS]
 
 
-@lru_cache(maxsize=512)
+@lru_cache(maxsize=4096)  # room for the whole skill catalogue (about 800 terms), or it recompiles them every time
 def _term_pattern(term):
     # "Power BI" also matches "PowerBI" / "power-bi"; symbols like C++ or .NET are kept literal.
     parts = [re.escape(p) for p in term.lower().split()]
@@ -29,7 +29,8 @@ def mentions(text, term):
 def find_terms(text, terms):
     """The terms out of `terms` that the text mentions, in the order given."""
     lowered = (text or "").lower()
-    return [t for t in terms if _term_pattern(t).search(lowered)]
+    # A term's first word always appears as written, so terms without it are skipped before the slower pattern.
+    return [t for t in terms if t.split() and t.lower().split()[0] in lowered and _term_pattern(t).search(lowered)]
 
 
 def title_score(job_title, titles):
